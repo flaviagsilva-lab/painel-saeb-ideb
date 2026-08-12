@@ -217,3 +217,66 @@ else:
     st.success(
         "Filtros definidos com sucesso."
     )
+
+
+# ==================================================
+# NAVEGAÇÃO PRINCIPAL
+# ==================================================
+
+st.divider()
+
+st.header("Análises")
+
+aba_municipios, aba_escolas, aba_investimento = st.tabs(
+    [
+        "Municípios",
+        "Escolas",
+        "Investimento"
+    ]
+)
+
+
+# ==================================================
+# MUNICÍPIOS
+# ==================================================
+
+with aba_municipios:
+
+    st.subheader("Análises dos Municípios")
+
+    st.write(
+        "Nesta área serão apresentados os indicadores "
+        "educacionais, a evolução histórica e as "
+        "comparações entre municípios."
+    )
+
+
+# ==================================================
+# ESCOLAS
+# ==================================================
+
+with aba_escolas:
+
+    st.subheader("Análises das Escolas")
+
+    st.write(
+        "Nesta área serão apresentados os indicadores "
+        "educacionais, a evolução histórica e as "
+        "comparações entre escolas."
+    )
+
+
+# ==================================================
+# INVESTIMENTO
+# ==================================================
+
+with aba_investimento:
+
+    st.subheader("Investimento por Estudante")
+
+    st.write(
+        "Nesta área será apresentada a evolução do "
+        "investimento público por estudante com base "
+        "nos dados disponibilizados pelo INEP."
+    )
+
