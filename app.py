@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 # ==================================================
-# CONFIGURAÇÃO
+# CONFIGURAÇÃO DA PÁGINA
 # ==================================================
 
 st.set_page_config(
@@ -16,7 +16,7 @@ st.set_page_config(
 
 
 # ==================================================
-# PASTA DA APLICAÇÃO
+# LOCALIZAÇÃO DOS ARQUIVOS
 # ==================================================
 
 PASTA_APP = Path(__file__).resolve().parent
@@ -66,7 +66,7 @@ base_escolas["Ano"] = pd.to_numeric(
 
 
 # ==================================================
-# TÍTULO
+# CABEÇALHO
 # ==================================================
 
 st.title("Painel de Indicadores Educacionais")
@@ -111,9 +111,7 @@ st.divider()
 st.subheader("Filtros")
 
 
-# --------------------------------------------------
-# PERÍODO
-# --------------------------------------------------
+# Período
 
 anos_disponiveis = sorted(
     base_municipios["Ano"]
@@ -123,7 +121,7 @@ anos_disponiveis = sorted(
     .tolist()
 )
 
-periodo = st.select_slider(
+ano_inicial, ano_final = st.select_slider(
     "Período de análise",
     options=anos_disponiveis,
     value=(
@@ -133,19 +131,14 @@ periodo = st.select_slider(
     key="periodo_analise"
 )
 
-ano_inicial, ano_final = periodo
 
-
-# --------------------------------------------------
-# ETAPAS
-# --------------------------------------------------
+# Etapas
 
 st.markdown("**Etapas de ensino**")
 
 col_fi, col_fii = st.columns(2)
 
 with col_fi:
-
     fundamental_i = st.checkbox(
         "Fundamental I",
         value=True,
@@ -153,7 +146,6 @@ with col_fi:
     )
 
 with col_fii:
-
     fundamental_ii = st.checkbox(
         "Fundamental II",
         value=True,
@@ -164,14 +156,10 @@ with col_fii:
 etapas_selecionadas = []
 
 if fundamental_i:
-    etapas_selecionadas.append(
-        "Fundamental I"
-    )
+    etapas_selecionadas.append("Fundamental I")
 
 if fundamental_ii:
-    etapas_selecionadas.append(
-        "Fundamental II"
-    )
+    etapas_selecionadas.append("Fundamental II")
 
 
 # ==================================================
@@ -185,7 +173,6 @@ st.subheader("Seleção atual")
 col_periodo, col_etapas = st.columns(2)
 
 with col_periodo:
-
     st.write(
         f"**Período:** {ano_inicial} a {ano_final}"
     )
@@ -193,14 +180,12 @@ with col_periodo:
 with col_etapas:
 
     if etapas_selecionadas:
-
         st.write(
             "**Etapas:** "
             + " | ".join(etapas_selecionadas)
         )
 
     else:
-
         st.write(
             "**Etapas:** nenhuma selecionada"
         )
@@ -212,11 +197,29 @@ if not etapas_selecionadas:
         "Selecione pelo menos uma etapa de ensino."
     )
 
-else:
+    st.stop()
 
-    st.success(
-        "Filtros definidos com sucesso."
-    )
+
+# ==================================================
+# FILTRAGEM DAS BASES
+# ==================================================
+
+municipios_filtrados = base_municipios[
+    (base_municipios["Ano"] >= ano_inicial)
+    &
+    (base_municipios["Ano"] <= ano_final)
+    &
+    (base_municipios["Etapa"].isin(etapas_selecionadas))
+].copy()
+
+
+escolas_filtradas = base_escolas[
+    (base_escolas["Ano"] >= ano_inicial)
+    &
+    (base_escolas["Ano"] <= ano_final)
+    &
+    (base_escolas["Etapa"].isin(etapas_selecionadas))
+].copy()
 
 
 # ==================================================
@@ -244,11 +247,83 @@ with aba_municipios:
 
     st.subheader("Análises dos Municípios")
 
-    st.write(
-        "Nesta área serão apresentados os indicadores "
-        "educacionais, a evolução histórica e as "
-        "comparações entre municípios."
+    analise_municipal = st.selectbox(
+        "Tipo de análise",
+        [
+            "Visão Geral",
+            "Evolução",
+            "Comparação entre Municípios",
+            "Matemática",
+            "Língua Portuguesa",
+            "Aprovação e Rendimento",
+            "IDEB e Metas",
+            "Rankings"
+        ],
+        key="analise_municipal"
     )
+
+
+    # ----------------------------------------------
+    # VISÃO GERAL
+    # ----------------------------------------------
+
+    if analise_municipal == "Visão Geral":
+
+        st.markdown("### Visão Geral")
+
+        total_municipios = (
+            municipios_filtrados["Município"]
+            .nunique()
+        )
+
+        total_edicoes = (
+            municipios_filtrados["Ano"]
+            .nunique()
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric(
+                "Municípios disponíveis",
+                total_municipios
+            )
+
+        with col2:
+            st.metric(
+                "Edições no período",
+                total_edicoes
+            )
+
+
+    # ----------------------------------------------
+    # OUTRAS ANÁLISES
+    # ----------------------------------------------
+
+    else:
+
+        lista_municipios = sorted(
+            municipios_filtrados["Município"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+        municipio_selecionado = st.selectbox(
+            "Município",
+            lista_municipios,
+            key="municipio_selecionado"
+        )
+
+        st.write(
+            "Município selecionado: "
+            f"**{municipio_selecionado}**"
+        )
+
+        st.info(
+            "As visualizações desta análise "
+            "serão incluídas nas próximas etapas."
+        )
 
 
 # ==================================================
@@ -260,9 +335,8 @@ with aba_escolas:
     st.subheader("Análises das Escolas")
 
     st.write(
-        "Nesta área serão apresentados os indicadores "
-        "educacionais, a evolução histórica e as "
-        "comparações entre escolas."
+        "As análises das escolas serão "
+        "desenvolvidas posteriormente."
     )
 
 
@@ -275,8 +349,7 @@ with aba_investimento:
     st.subheader("Investimento por Estudante")
 
     st.write(
-        "Nesta área será apresentada a evolução do "
-        "investimento público por estudante com base "
-        "nos dados disponibilizados pelo INEP."
+        "As análises de investimento serão "
+        "desenvolvidas posteriormente."
     )
 
