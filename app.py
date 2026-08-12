@@ -300,6 +300,80 @@ with aba_municipios:
     # OUTRAS ANÁLISES
     # ----------------------------------------------
 
+    elif analise_municipal == "Evolução":
+
+        st.markdown("### Evolução do IDEB")
+
+        # Para representar o resultado geral do município,
+        # utiliza-se a Rede Pública.
+        dados_evolucao = municipios_filtrados[
+            municipios_filtrados["Rede"] == "Pública"
+        ].copy()
+
+        lista_municipios = sorted(
+            dados_evolucao["Município"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+        municipio_selecionado = st.selectbox(
+            "Município",
+            lista_municipios,
+            key="municipio_evolucao"
+        )
+
+        dados_municipio = dados_evolucao[
+            dados_evolucao["Município"]
+            == municipio_selecionado
+        ].copy()
+
+        dados_municipio = dados_municipio[
+            [
+                "Ano",
+                "Etapa",
+                "IDEB"
+            ]
+        ].dropna(
+            subset=["IDEB"]
+        )
+
+        dados_municipio = dados_municipio.sort_values(
+            by=["Etapa", "Ano"]
+        )
+
+        st.write(
+            f"Município selecionado: "
+            f"**{municipio_selecionado}**"
+        )
+
+        if dados_municipio.empty:
+
+            st.warning(
+                "Não há resultados de IDEB disponíveis "
+                "para os filtros selecionados."
+            )
+
+        else:
+
+            dados_grafico = dados_municipio.pivot(
+                index="Ano",
+                columns="Etapa",
+                values="IDEB"
+            )
+
+            st.line_chart(
+                dados_grafico,
+                x_label="Ano",
+                y_label="IDEB"
+            )
+
+            st.caption(
+                "Os resultados apresentados utilizam "
+                "os registros da Rede Pública."
+            )
+
+
     else:
 
         lista_municipios = sorted(
