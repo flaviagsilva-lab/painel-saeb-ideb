@@ -323,7 +323,35 @@ with aba_municipios:
 
 
         # ==========================================
-        # REDES DISPONÍVEIS PARA COMPARAÇÃO
+        # FUNÇÃO PARA NORMALIZAÇÃO DOS NOMES
+        # ==========================================
+
+        def normalizar_municipio(texto):
+
+            texto = (
+                str(texto)
+                .strip()
+                .lower()
+            )
+
+            texto = unicodedata.normalize(
+                "NFKD",
+                texto
+            )
+
+            texto = "".join(
+                caractere
+                for caractere in texto
+                if not unicodedata.combining(
+                    caractere
+                )
+            )
+
+            return texto
+
+
+        # ==========================================
+        # REDES DISPONÍVEIS
         # ==========================================
 
         ordem_redes = [
@@ -360,7 +388,7 @@ with aba_municipios:
         else:
 
             # ======================================
-            # SELETOR DA REDE
+            # REDE PARA COMPARAÇÃO
             # ======================================
 
             rede_comparacao = st.selectbox(
@@ -372,7 +400,7 @@ with aba_municipios:
 
 
             # ======================================
-            # BASE DA REDE SELECIONADA
+            # MUNICÍPIOS DA REDE
             # ======================================
 
             dados_rede_comparacao = (
@@ -383,10 +411,6 @@ with aba_municipios:
                 .copy()
             )
 
-
-            # ======================================
-            # MUNICÍPIOS DISPONÍVEIS
-            # ======================================
 
             lista_municipios = sorted(
                 dados_rede_comparacao[
@@ -400,71 +424,72 @@ with aba_municipios:
             )
 
 
-            # Barueri já está fixa como referência
+            # Barueri já é a referência fixa
             lista_municipios = [
                 municipio
                 for municipio in lista_municipios
-                if municipio
-                != municipio_referencia
+                if normalizar_municipio(
+                    municipio
+                )
+                != normalizar_municipio(
+                    municipio_referencia
+                )
             ]
 
 
             # ======================================
-            # NORMALIZAÇÃO DOS NOMES
+            # BUSCA DO MUNICÍPIO
             # ======================================
 
-            def normalizar_municipio(texto):
-
-                texto = (
-                    str(texto)
-                    .strip()
-                    .lower()
-                )
-
-                texto = unicodedata.normalize(
-                    "NFKD",
-                    texto
-                )
-
-                texto = "".join(
-                    caractere
-                    for caractere in texto
-                    if not unicodedata.combining(
-                        caractere
-                    )
-                )
-
-                return texto
+            busca_municipio = st.text_input(
+                "Buscar município",
+                value="",
+                placeholder=(
+                    "Digite o nome ou parte do nome"
+                ),
+                key="busca_municipio_comparacao"
+            )
 
 
-            # Nome sem acento para busca
-            # Nome original para apresentação
-            mapa_municipios = {
+            busca_normalizada = (
                 normalizar_municipio(
-                    municipio
-                ):
-                    municipio
-                for municipio
-                in lista_municipios
-            }
-
-
-            opcoes_municipios = sorted(
-                mapa_municipios.keys()
+                    busca_municipio
+                )
             )
 
 
             # ======================================
-            # SELEÇÃO MÚLTIPLA DOS MUNICÍPIOS
+            # FILTRAR RESULTADOS DA BUSCA
             # ======================================
 
-            municipios_normalizados = (
+            if busca_normalizada:
+
+                municipios_encontrados = [
+                    municipio
+                    for municipio
+                    in lista_municipios
+                    if busca_normalizada
+                    in normalizar_municipio(
+                        municipio
+                    )
+                ]
+
+            else:
+
+                municipios_encontrados = (
+                    lista_municipios
+                )
+
+
+            # ======================================
+            # SELEÇÃO MÚLTIPLA
+            # ======================================
+
+            municipios_comparacao = (
                 st.multiselect(
                     "Municípios para comparar com Barueri",
-                    options=opcoes_municipios,
+                    options=municipios_encontrados,
                     default=[],
-                    format_func=lambda nome:
-                        mapa_municipios[nome],
                     key=(
                         "municipios_"
                         "comparacao_principal"
@@ -473,11 +498,26 @@ with aba_municipios:
             )
 
 
-            municipios_comparacao = [
-                mapa_municipios[nome]
-                for nome
-                in municipios_normalizados
-            ]
+            # ======================================
+            # INFORMAÇÃO SOBRE A BUSCA
+            # ======================================
+
+            if busca_normalizada:
+
+                if municipios_encontrados:
+
+                    st.caption(
+                        f"{len(municipios_encontrados)} "
+                        "município(s) encontrado(s)."
+                    )
+
+                else:
+
+                    st.warning(
+                        "Nenhum município encontrado "
+                        "para essa busca na rede "
+                        "selecionada."
+                    )
 
 
             # ======================================
@@ -498,7 +538,7 @@ with aba_municipios:
 
 
             # ======================================
-            # RESUMO DA COMPARAÇÃO
+            # RESUMO
             # ======================================
 
             st.markdown(
@@ -542,7 +582,7 @@ with aba_municipios:
 
 
             # ======================================
-            # ÁREA RESERVADA PARA OS GRÁFICOS
+            # ÁREA DOS GRÁFICOS
             # ======================================
 
             if not municipios_comparacao:
