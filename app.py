@@ -306,7 +306,7 @@ with aba_municipios:
 
 
         # ==========================================
-        # REFERÊNCIA FIXA
+        # MUNICÍPIO DE REFERÊNCIA
         # ==========================================
 
         municipio_referencia = "Barueri"
@@ -323,7 +323,7 @@ with aba_municipios:
 
 
         # ==========================================
-        # REDE PARA COMPARAÇÃO
+        # REDES DISPONÍVEIS PARA COMPARAÇÃO
         # ==========================================
 
         ordem_redes = [
@@ -336,6 +336,8 @@ with aba_municipios:
         redes_existentes = (
             municipios_filtrados["Rede"]
             .dropna()
+            .astype(str)
+            .str.strip()
             .unique()
             .tolist()
         )
@@ -357,6 +359,10 @@ with aba_municipios:
 
         else:
 
+            # ======================================
+            # SELETOR DA REDE
+            # ======================================
+
             rede_comparacao = st.selectbox(
                 "Rede para comparação",
                 options=redes_disponiveis,
@@ -366,7 +372,7 @@ with aba_municipios:
 
 
             # ======================================
-            # MUNICÍPIOS DA REDE ESCOLHIDA
+            # BASE DA REDE SELECIONADA
             # ======================================
 
             dados_rede_comparacao = (
@@ -378,17 +384,23 @@ with aba_municipios:
             )
 
 
+            # ======================================
+            # MUNICÍPIOS DISPONÍVEIS
+            # ======================================
+
             lista_municipios = sorted(
                 dados_rede_comparacao[
                     "Município"
                 ]
                 .dropna()
+                .astype(str)
+                .str.strip()
                 .unique()
                 .tolist()
             )
 
 
-            # Barueri já é a referência fixa
+            # Barueri já está fixa como referência
             lista_municipios = [
                 municipio
                 for municipio in lista_municipios
@@ -425,6 +437,8 @@ with aba_municipios:
                 return texto
 
 
+            # Nome sem acento para busca
+            # Nome original para apresentação
             mapa_municipios = {
                 normalizar_municipio(
                     municipio
@@ -441,7 +455,7 @@ with aba_municipios:
 
 
             # ======================================
-            # SELEÇÃO MÚLTIPLA
+            # SELEÇÃO MÚLTIPLA DOS MUNICÍPIOS
             # ======================================
 
             municipios_normalizados = (
@@ -479,15 +493,12 @@ with aba_municipios:
                     "IDEB"
                 ],
                 index=0,
-                key=(
-                    "opcao_comparacao_"
-                    "municipios"
-                )
+                key="opcao_comparacao_municipios"
             )
 
 
             # ======================================
-            # RESUMO DA SELEÇÃO
+            # RESUMO DA COMPARAÇÃO
             # ======================================
 
             st.markdown(
@@ -531,7 +542,7 @@ with aba_municipios:
 
 
             # ======================================
-            # ÁREA DOS GRÁFICOS
+            # ÁREA RESERVADA PARA OS GRÁFICOS
             # ======================================
 
             if not municipios_comparacao:
@@ -544,10 +555,10 @@ with aba_municipios:
             else:
 
                 st.info(
-                    "A seleção está pronta. "
-                    "Os gráficos deste indicador "
-                    "serão incorporados nas próximas "
-                    "etapas da análise."
+                    "Comparação configurada. "
+                    "Os gráficos correspondentes ao "
+                    "indicador selecionado serão "
+                    "apresentados nesta área."
                 )
 
 
@@ -1385,5 +1396,4 @@ with aba_investimento:
         "As análises de investimento serão "
         "desenvolvidas posteriormente."
     )
-
 
