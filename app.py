@@ -710,7 +710,7 @@ with aba_municipios:
 
 
                 # ==================================
-                # ANOS DA ANÁLISE
+                # ANOS
                 # ==================================
 
                 anos_comparacao = [
@@ -731,10 +731,60 @@ with aba_municipios:
 
 
                 dados_aprovacao["Ano"] = (
-                    dados_aprovacao["Ano"]
-                    .astype(int)
+                    pd.to_numeric(
+                        dados_aprovacao["Ano"],
+                        errors="coerce"
+                    )
+                    .astype("Int64")
                     .astype(str)
                 )
+
+
+                # ==================================
+                # ESCALA DINÂMICA
+                # ==================================
+
+                def calcular_escala_aprovacao(
+                    serie_valores
+                ):
+
+                    valores_validos = (
+                        pd.to_numeric(
+                            serie_valores,
+                            errors="coerce"
+                        )
+                        .dropna()
+                    )
+
+
+                    if valores_validos.empty:
+
+                        return 0, 100
+
+
+                    valor_minimo = float(
+                        valores_validos.min()
+                    )
+
+
+                    limite_inferior = max(
+                        0,
+                        valor_minimo - 5
+                    )
+
+
+                    limite_inferior = (
+                        int(
+                            limite_inferior // 5
+                        )
+                        * 5
+                    )
+
+
+                    return (
+                        limite_inferior,
+                        100
+                    )
 
 
                 # ==================================
@@ -761,6 +811,16 @@ with aba_municipios:
                                 == etapa
                             ]
                             .copy()
+                        )
+
+
+                        dados_etapa[
+                            "Aprovação Geral"
+                        ] = pd.to_numeric(
+                            dados_etapa[
+                                "Aprovação Geral"
+                            ],
+                            errors="coerce"
                         )
 
 
@@ -793,9 +853,15 @@ with aba_municipios:
                             continue
 
 
-                        # --------------------------
-                        # LINHAS
-                        # --------------------------
+                        (
+                            escala_minima,
+                            escala_maxima
+                        ) = calcular_escala_aprovacao(
+                            dados_etapa[
+                                "Aprovação Geral"
+                            ]
+                        )
+
 
                         linhas_grafico = (
                             alt.Chart(
@@ -822,9 +888,12 @@ with aba_municipios:
                                     ),
                                     scale=alt.Scale(
                                         domain=[
-                                            0,
-                                            100
+                                            escala_minima,
+                                            escala_maxima
                                         ]
+                                    ),
+                                    axis=alt.Axis(
+                                        format=".0f"
                                     )
                                 ),
 
@@ -870,10 +939,6 @@ with aba_municipios:
                         )
 
 
-                        # --------------------------
-                        # VALORES NOS PONTOS
-                        # --------------------------
-
                         valores_grafico = (
                             alt.Chart(
                                 dados_etapa
@@ -890,7 +955,13 @@ with aba_municipios:
                                 ),
 
                                 y=alt.Y(
-                                    "Aprovação Geral:Q"
+                                    "Aprovação Geral:Q",
+                                    scale=alt.Scale(
+                                        domain=[
+                                            escala_minima,
+                                            escala_maxima
+                                        ]
+                                    )
                                 ),
 
                                 text=alt.Text(
@@ -926,12 +997,34 @@ with aba_municipios:
 
                 else:
 
+                    # ==================================
+                    # MUNICÍPIOS QUE DEVEM APARECER
+                    # ==================================
+
+                    comparacoes_esperadas = [
+                        "Barueri - Municipal"
+                    ]
+
+
+                    for municipio in municipios_comparacao:
+
+                        comparacoes_esperadas.append(
+                            municipio
+                            + " - "
+                            + rede_comparacao
+                        )
+
+
                     for etapa in etapas_selecionadas:
 
                         st.markdown(
                             f"#### {etapa}"
                         )
 
+
+                        # ==============================
+                        # SÉRIES DA ETAPA
+                        # ==============================
 
                         if etapa == "Fundamental I":
 
@@ -955,7 +1048,8 @@ with aba_municipios:
 
                         series_disponiveis = [
                             serie
-                            for serie in series_etapa
+                            for serie
+                            in series_etapa
                             if serie
                             in dados_aprovacao.columns
                         ]
@@ -964,8 +1058,9 @@ with aba_municipios:
                         if not series_disponiveis:
 
                             st.info(
-                                "Não há taxas por série "
-                                "disponíveis para esta etapa."
+                                "Não há taxas de aprovação "
+                                "por série disponíveis "
+                                "para esta etapa."
                             )
 
                             continue
@@ -992,23 +1087,35 @@ with aba_municipios:
                             continue
 
 
-                        # ==========================
-                        # UM GRÁFICO POR MUNICÍPIO
-                        # ==========================
+                        # ==============================
+                        # CONVERTER TODAS AS SÉRIES
+                        # PARA NUMÉRICO
+                        # ==============================
 
-                        comparacoes_disponiveis = (
+                        for serie in series_disponiveis:
+
                             dados_etapa[
-                                "Comparação"
-                            ]
-                            .dropna()
-                            .unique()
-                            .tolist()
-                        )
+                                serie
+                            ] = pd.to_numeric(
+                                dados_etapa[
+                                    serie
+                                ],
+                                errors="coerce"
+                            )
 
+
+                        # ==============================
+                        # GRÁFICO DE CADA MUNICÍPIO
+                        # ==============================
 
                         for comparacao in (
-                            comparacoes_disponiveis
+                            comparacoes_esperadas
                         ):
+
+                            st.markdown(
+                                f"##### {comparacao}"
+                            )
+
 
                             dados_municipio_serie = (
                                 dados_etapa[
@@ -1020,6 +1127,28 @@ with aba_municipios:
                                 .copy()
                             )
 
+
+                            # --------------------------
+                            # MUNICÍPIO NÃO POSSUI
+                            # REGISTRO NESTA ETAPA
+                            # --------------------------
+
+                            if (
+                                dados_municipio_serie.empty
+                            ):
+
+                                st.caption(
+                                    "Não há resultados "
+                                    "disponíveis para este "
+                                    "município, rede e etapa."
+                                )
+
+                                continue
+
+
+                            # --------------------------
+                            # FORMATO LONGO
+                            # --------------------------
 
                             dados_longos = (
                                 dados_municipio_serie[
@@ -1040,6 +1169,21 @@ with aba_municipios:
                                         "Taxa de Aprovação"
                                     )
                                 )
+                            )
+
+
+                            dados_longos[
+                                "Taxa de Aprovação"
+                            ] = pd.to_numeric(
+                                dados_longos[
+                                    "Taxa de Aprovação"
+                                ],
+                                errors="coerce"
+                            )
+
+
+                            dados_longos = (
+                                dados_longos
                                 .dropna(
                                     subset=[
                                         "Taxa de Aprovação"
@@ -1048,17 +1192,45 @@ with aba_municipios:
                             )
 
 
+                            # --------------------------
+                            # EXISTE MUNICÍPIO,
+                            # MAS NÃO EXISTEM TAXAS
+                            # POR SÉRIE
+                            # --------------------------
+
                             if dados_longos.empty:
+
+                                st.caption(
+                                    "O município possui "
+                                    "registro nesta etapa, "
+                                    "mas não há taxas de "
+                                    "aprovação por série/ano "
+                                    "disponíveis no período "
+                                    "selecionado."
+                                )
 
                                 continue
 
 
-                            st.markdown(
-                                f"##### {comparacao}"
+                            # ==========================
+                            # ESCALA DINÂMICA
+                            # ==========================
+
+                            (
+                                escala_minima,
+                                escala_maxima
+                            ) = calcular_escala_aprovacao(
+                                dados_longos[
+                                    "Taxa de Aprovação"
+                                ]
                             )
 
 
-                            grafico_series = (
+                            # ==========================
+                            # LINHAS
+                            # ==========================
+
+                            linhas_series = (
                                 alt.Chart(
                                     dados_longos
                                 )
@@ -1083,9 +1255,12 @@ with aba_municipios:
                                         ),
                                         scale=alt.Scale(
                                             domain=[
-                                                0,
-                                                100
+                                                escala_minima,
+                                                escala_maxima
                                             ]
+                                        ),
+                                        axis=alt.Axis(
+                                            format=".0f"
                                         )
                                     ),
 
@@ -1112,9 +1287,56 @@ with aba_municipios:
                                         )
                                     ]
                                 )
-                                .properties(
-                                    height=390
+                            )
+
+
+                            # ==========================
+                            # VALORES
+                            # ==========================
+
+                            valores_series = (
+                                alt.Chart(
+                                    dados_longos
                                 )
+                                .mark_text(
+                                    dy=-11,
+                                    fontSize=10
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        sort=anos_comparacao
+                                    ),
+
+                                    y=alt.Y(
+                                        "Taxa de Aprovação:Q",
+                                        scale=alt.Scale(
+                                            domain=[
+                                                escala_minima,
+                                                escala_maxima
+                                            ]
+                                        )
+                                    ),
+
+                                    text=alt.Text(
+                                        "Taxa de Aprovação:Q",
+                                        format=".1f"
+                                    ),
+
+                                    color=alt.Color(
+                                        "Série:N",
+                                        legend=None
+                                    )
+                                )
+                            )
+
+
+                            grafico_series = (
+                                linhas_series
+                                + valores_series
+                            ).properties(
+                                height=390
                             )
 
 
@@ -1125,11 +1347,12 @@ with aba_municipios:
 
 
                 st.caption(
+                    "A escala vertical é ajustada "
+                    "automaticamente aos valores "
+                    "apresentados, mantendo 100% "
+                    "como limite superior. "
                     "Barueri permanece como referência "
-                    "pela Rede Municipal. "
-                    "Os demais municípios utilizam "
-                    "exclusivamente a rede escolhida "
-                    "para comparação."
+                    "pela Rede Municipal."
                 )
 
 
