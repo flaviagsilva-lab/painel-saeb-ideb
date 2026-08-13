@@ -323,7 +323,7 @@ with aba_municipios:
 
 
         # ==========================================
-        # FUNÇÃO PARA NORMALIZAÇÃO DOS NOMES
+        # FUNÇÃO DE NORMALIZAÇÃO
         # ==========================================
 
         def normalizar_municipio(texto):
@@ -400,7 +400,7 @@ with aba_municipios:
 
 
             # ======================================
-            # MUNICÍPIOS DA REDE
+            # BASE DA REDE SELECIONADA
             # ======================================
 
             dados_rede_comparacao = (
@@ -411,6 +411,10 @@ with aba_municipios:
                 .copy()
             )
 
+
+            # ======================================
+            # MUNICÍPIOS DISPONÍVEIS
+            # ======================================
 
             lista_municipios = sorted(
                 dados_rede_comparacao[
@@ -459,7 +463,7 @@ with aba_municipios:
 
 
             # ======================================
-            # FILTRAR RESULTADOS DA BUSCA
+            # FILTRO SEM OBRIGAÇÃO DE ACENTO
             # ======================================
 
             if busca_normalizada:
@@ -499,7 +503,7 @@ with aba_municipios:
 
 
             # ======================================
-            # INFORMAÇÃO SOBRE A BUSCA
+            # RESULTADO DA BUSCA
             # ======================================
 
             if busca_normalizada:
@@ -538,6 +542,77 @@ with aba_municipios:
 
 
             # ======================================
+            # BASE FIXA DE BARUERI
+            # ======================================
+
+            dados_barueri_comparacao = (
+                municipios_filtrados[
+                    (
+                        municipios_filtrados[
+                            "Município"
+                        ]
+                        == municipio_referencia
+                    )
+                    &
+                    (
+                        municipios_filtrados[
+                            "Rede"
+                        ]
+                        == rede_referencia
+                    )
+                ]
+                .copy()
+            )
+
+
+            dados_barueri_comparacao[
+                "Comparação"
+            ] = "Barueri - Municipal"
+
+
+            # ======================================
+            # PARTES DA COMPARAÇÃO
+            # ======================================
+
+            partes_comparacao = [
+                dados_barueri_comparacao
+            ]
+
+
+            for municipio in municipios_comparacao:
+
+                dados_municipio = (
+                    dados_rede_comparacao[
+                        dados_rede_comparacao[
+                            "Município"
+                        ]
+                        == municipio
+                    ]
+                    .copy()
+                )
+
+
+                dados_municipio[
+                    "Comparação"
+                ] = (
+                    municipio
+                    + " - "
+                    + rede_comparacao
+                )
+
+
+                partes_comparacao.append(
+                    dados_municipio
+                )
+
+
+            dados_comparacao = pd.concat(
+                partes_comparacao,
+                ignore_index=True
+            )
+
+
+            # ======================================
             # RESUMO
             # ======================================
 
@@ -561,7 +636,7 @@ with aba_municipios:
             if municipios_comparacao:
 
                 st.write(
-                    "**Municípios:** "
+                    "**Municípios adicionais:** "
                     + " | ".join(
                         municipios_comparacao
                     )
@@ -570,8 +645,10 @@ with aba_municipios:
             else:
 
                 st.caption(
-                    "Nenhum município comparativo "
-                    "selecionado."
+                    "Nenhum município adicional "
+                    "selecionado. "
+                    "Os resultados de Barueri "
+                    "continuam disponíveis."
                 )
 
 
@@ -582,24 +659,36 @@ with aba_municipios:
 
 
             # ======================================
-            # ÁREA DOS GRÁFICOS
+            # CONFERÊNCIA DA BASE PREPARADA
             # ======================================
 
-            if not municipios_comparacao:
+            if dados_barueri_comparacao.empty:
 
-                st.info(
-                    "Selecione pelo menos um município "
-                    "para iniciar a comparação."
+                st.warning(
+                    "Não foram encontrados resultados "
+                    "de Barueri — Municipal para os "
+                    "filtros selecionados."
                 )
 
             else:
 
-                st.info(
-                    "Comparação configurada. "
-                    "Os gráficos correspondentes ao "
-                    "indicador selecionado serão "
-                    "apresentados nesta área."
+                st.caption(
+                    "Barueri permanece como referência "
+                    "em todas as análises, mesmo sem "
+                    "outro município selecionado."
                 )
+
+
+            # ======================================
+            # ÁREA DOS GRÁFICOS
+            # ======================================
+
+            st.info(
+                "A seleção está preparada. "
+                "Os gráficos do indicador escolhido "
+                "serão incorporados nas próximas "
+                "etapas da análise."
+            )
 
 
     elif analise_municipal == "Evolução":
