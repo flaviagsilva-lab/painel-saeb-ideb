@@ -2855,7 +2855,7 @@ with aba_municipios:
 
                 # ==================================
                 # 1. LP × MATEMÁTICA
-                # MESMO GRÁFICO
+                # TODAS AS LINHAS CONTÍNUAS
                 # ==================================
 
                 if (
@@ -2874,9 +2874,9 @@ with aba_municipios:
                     else:
 
                         st.caption(
-                            "As cores identificam os "
-                            "municípios. O tipo da linha "
-                            "identifica a disciplina."
+                            "Cada cor representa uma "
+                            "combinação de município e "
+                            "disciplina."
                         )
 
 
@@ -2979,7 +2979,7 @@ with aba_municipios:
                                 dados_long[
                                     "Comparação"
                                 ]
-                                + " | "
+                                + " - "
                                 + dados_long[
                                     "Disciplina"
                                 ]
@@ -2997,9 +2997,31 @@ with aba_municipios:
 
 
                             # ======================
-                            # LINHAS
-                            # COR = MUNICÍPIO
-                            # TRACEJADO = DISCIPLINA
+                            # ORDEM DAS SÉRIES
+                            # ======================
+
+                            ordem_series = []
+
+
+                            for comparacao in comparacoes_saeb:
+
+                                for disciplina in (
+                                    disciplinas_saeb
+                                ):
+
+                                    nome_serie = (
+                                        comparacao
+                                        + " - "
+                                        + disciplina
+                                    )
+
+                                    ordem_series.append(
+                                        nome_serie
+                                    )
+
+
+                            # ======================
+                            # LINHAS CONTÍNUAS
                             # ======================
 
                             linhas_prof = (
@@ -3035,35 +3057,15 @@ with aba_municipios:
                                     ),
 
                                     color=alt.Color(
-                                        "Comparação:N",
+                                        "Série gráfica:N",
                                         title=(
-                                            "Município / Rede"
+                                            "Município / Disciplina"
                                         ),
-                                        sort=(
-                                            comparacoes_saeb
-                                        ),
+                                        sort=ordem_series,
                                         legend=alt.Legend(
                                             orient="bottom",
-                                            direction="horizontal"
-                                        )
-                                    ),
-
-                                    strokeDash=alt.StrokeDash(
-                                        "Disciplina:N",
-                                        title="Disciplina",
-                                        scale=alt.Scale(
-                                            domain=[
-                                                "Língua Portuguesa",
-                                                "Matemática"
-                                            ],
-                                            range=[
-                                                [1, 0],
-                                                [8, 4]
-                                            ]
-                                        ),
-                                        legend=alt.Legend(
-                                            orient="bottom",
-                                            direction="horizontal"
+                                            direction="horizontal",
+                                            columns=2
                                         )
                                     ),
 
@@ -3142,10 +3144,8 @@ with aba_municipios:
                                     ),
 
                                     color=alt.Color(
-                                        "Comparação:N",
-                                        sort=(
-                                            comparacoes_saeb
-                                        ),
+                                        "Série gráfica:N",
+                                        sort=ordem_series,
                                         legend=None
                                     ),
 
@@ -3370,7 +3370,6 @@ with aba_municipios:
 
                 # ==================================
                 # 3. LP + MATEMÁTICA × N
-                # MESMO GRÁFICO
                 # ==================================
 
                 else:
@@ -3389,9 +3388,7 @@ with aba_municipios:
                             "As colunas representam as "
                             "proficiências e as linhas "
                             "representam a Nota Média "
-                            "Padronizada (N). Todos os "
-                            "municípios selecionados são "
-                            "apresentados no mesmo gráfico."
+                            "Padronizada (N)."
                         )
 
 
@@ -3433,7 +3430,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # COLUNAS
+                            # DADOS DAS COLUNAS
                             # ======================
 
                             dados_colunas = (
@@ -3468,15 +3465,13 @@ with aba_municipios:
                             )
 
 
-                            # Identificador único
-                            # município + disciplina
                             dados_colunas[
-                                "Grupo"
+                                "Série gráfica"
                             ] = (
                                 dados_colunas[
                                     "Comparação"
                                 ]
-                                + " | "
+                                + " - "
                                 + dados_colunas[
                                     "Disciplina"
                                 ]
@@ -3484,7 +3479,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # LINHAS DO N
+                            # DADOS DO N
                             # ======================
 
                             dados_linha_n = (
@@ -3544,18 +3539,34 @@ with aba_municipios:
                             )
 
 
+                            ordem_series = []
+
+
+                            for comparacao in comparacoes_saeb:
+
+                                for disciplina in (
+                                    disciplinas_saeb
+                                ):
+
+                                    ordem_series.append(
+                                        comparacao
+                                        + " - "
+                                        + disciplina
+                                    )
+
+
                             # ======================
                             # COLUNAS
-                            #
-                            # Cor = município
-                            # Opacidade = disciplina
+                            # COR = MUNICÍPIO + DISCIPLINA
                             # ======================
 
                             barras_prof = (
                                 alt.Chart(
                                     dados_colunas
                                 )
-                                .mark_bar()
+                                .mark_bar(
+                                    opacity=0.82
+                                )
                                 .encode(
 
                                     x=alt.X(
@@ -3568,7 +3579,8 @@ with aba_municipios:
                                     ),
 
                                     xOffset=alt.XOffset(
-                                        "Grupo:N"
+                                        "Série gráfica:N",
+                                        sort=ordem_series
                                     ),
 
                                     y=alt.Y(
@@ -3585,35 +3597,15 @@ with aba_municipios:
                                     ),
 
                                     color=alt.Color(
-                                        "Comparação:N",
+                                        "Série gráfica:N",
                                         title=(
-                                            "Município / Rede"
+                                            "Município / Disciplina"
                                         ),
-                                        sort=(
-                                            comparacoes_saeb
-                                        ),
+                                        sort=ordem_series,
                                         legend=alt.Legend(
                                             orient="bottom",
-                                            direction="horizontal"
-                                        )
-                                    ),
-
-                                    opacity=alt.Opacity(
-                                        "Disciplina:N",
-                                        title="Disciplina",
-                                        scale=alt.Scale(
-                                            domain=[
-                                                "Língua Portuguesa",
-                                                "Matemática"
-                                            ],
-                                            range=[
-                                                0.55,
-                                                1.0
-                                            ]
-                                        ),
-                                        legend=alt.Legend(
-                                            orient="bottom",
-                                            direction="horizontal"
+                                            direction="horizontal",
+                                            columns=2
                                         )
                                     ),
 
@@ -3649,7 +3641,55 @@ with aba_municipios:
 
 
                             # ======================
-                            # LINHAS DO N
+                            # VALORES DAS COLUNAS
+                            # ======================
+
+                            valores_barras = (
+                                alt.Chart(
+                                    dados_colunas
+                                )
+                                .mark_text(
+                                    dy=-8,
+                                    fontSize=8
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        sort=anos_saeb
+                                    ),
+
+                                    xOffset=alt.XOffset(
+                                        "Série gráfica:N",
+                                        sort=ordem_series
+                                    ),
+
+                                    y=alt.Y(
+                                        "Proficiência:Q",
+                                        scale=alt.Scale(
+                                            domain=[
+                                                prof_min,
+                                                prof_max
+                                            ]
+                                        )
+                                    ),
+
+                                    text=alt.Text(
+                                        "Proficiência:Q",
+                                        format=".2f"
+                                    ),
+
+                                    color=alt.Color(
+                                        "Série gráfica:N",
+                                        sort=ordem_series,
+                                        legend=None
+                                    )
+                                )
+                            )
+
+
+                            # ======================
+                            # LINHAS DE N
                             # COR = MUNICÍPIO
                             # ======================
 
@@ -3689,12 +3729,15 @@ with aba_municipios:
                                     color=alt.Color(
                                         "Comparação:N",
                                         title=(
-                                            "Município / Rede"
+                                            "N - Município / Rede"
                                         ),
                                         sort=(
                                             comparacoes_saeb
                                         ),
-                                        legend=None
+                                        legend=alt.Legend(
+                                            orient="bottom",
+                                            direction="horizontal"
+                                        )
                                     ),
 
                                     detail=alt.Detail(
@@ -3779,6 +3822,7 @@ with aba_municipios:
                             grafico_combinado = (
                                 alt.layer(
                                     barras_prof,
+                                    valores_barras,
                                     linhas_n_combinadas,
                                     valores_n_combinados
                                 )
@@ -3786,7 +3830,7 @@ with aba_municipios:
                                     y="independent"
                                 )
                                 .properties(
-                                    height=480
+                                    height=500
                                 )
                             )
 
