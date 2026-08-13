@@ -1,6 +1,7 @@
 
 import streamlit as st
 import pandas as pd
+import unicodedata
 import altair as alt
 from pathlib import Path
 
@@ -307,438 +308,469 @@ with aba_municipios:
 
 
         # ==========================================
+        # FUNÇÃO PARA NORMALIZAR TEXTOS
+        # ==========================================
+
+        def normalizar_texto(texto):
+
+            texto = str(texto).strip().lower()
+
+            texto = unicodedata.normalize(
+                "NFKD",
+                texto
+            )
+
+            texto = "".join(
+                caractere
+                for caractere in texto
+                if not unicodedata.combining(
+                    caractere
+                )
+            )
+
+            return texto
+
+
+        # ==========================================
         # BASE DA EVOLUÇÃO
         # ==========================================
 
-        dados_evolucao = municipios_filtrados.copy()
+        dados_evolucao = (
+            municipios_filtrados.copy()
+        )
 
 
         # ==========================================
-        # MUNICÍPIO DE REFERÊNCIA
+        # REFERÊNCIA FIXA
         # ==========================================
 
         municipio_referencia = "Barueri"
+        rede_referencia = "Municipal"
+
+
+        st.markdown(
+            "#### Município de referência"
+        )
+
+        st.write(
+            "**Barueri — Rede Municipal**"
+        )
 
 
         # ==========================================
-        # REDES DISPONÍVEIS PARA BARUERI
+        # DADOS DE BARUERI
         # ==========================================
 
-        redes_barueri = sorted(
-            dados_evolucao.loc[
+        dados_barueri = dados_evolucao[
+            (
                 dados_evolucao["Município"]
-                == municipio_referencia,
-                "Rede"
-            ]
+                == municipio_referencia
+            )
+            &
+            (
+                dados_evolucao["Rede"]
+                == rede_referencia
+            )
+        ].copy()
+
+
+        # ==========================================
+        # REDES PARA COMPARAÇÃO
+        # ==========================================
+
+        redes_preferenciais = [
+            "Municipal",
+            "Estadual",
+            "Pública"
+        ]
+
+
+        redes_existentes = (
+            dados_evolucao["Rede"]
             .dropna()
             .unique()
             .tolist()
         )
 
 
-        if not redes_barueri:
+        redes_comparacao_disponiveis = [
+            rede
+            for rede in redes_preferenciais
+            if rede in redes_existentes
+        ]
 
-            st.warning(
-                "Não foram encontrados registros "
-                "de Barueri para os filtros selecionados."
+
+        rede_comparacao = st.selectbox(
+            "Rede para comparação",
+            options=redes_comparacao_disponiveis,
+            index=0,
+            key="rede_comparacao_evolucao"
+        )
+
+
+        # ==========================================
+        # MUNICÍPIOS DISPONÍVEIS NA REDE
+        # ==========================================
+
+        dados_rede = dados_evolucao[
+            dados_evolucao["Rede"]
+            == rede_comparacao
+        ].copy()
+
+
+        lista_municipios = sorted(
+            dados_rede["Município"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+
+        # Barueri já é referência fixa
+        lista_municipios = [
+            municipio
+            for municipio in lista_municipios
+            if municipio != municipio_referencia
+        ]
+
+
+        # ==========================================
+        # BUSCA SEM OBRIGAÇÃO DE ACENTOS
+        # ==========================================
+
+        busca_municipio = st.text_input(
+            "Buscar município",
+            placeholder=(
+                "Ex.: Alvares Machado"
+            ),
+            key="busca_municipio_evolucao"
+        )
+
+
+        if busca_municipio.strip():
+
+            busca_normalizada = (
+                normalizar_texto(
+                    busca_municipio
+                )
+            )
+
+            municipios_exibidos = [
+                municipio
+                for municipio in lista_municipios
+                if busca_normalizada
+                in normalizar_texto(
+                    municipio
+                )
+            ]
+
+        else:
+
+            municipios_exibidos = (
+                lista_municipios
+            )
+
+
+        # ==========================================
+        # SELEÇÃO MÚLTIPLA
+        # ==========================================
+
+        municipios_comparacao = (
+            st.multiselect(
+                "Municípios para comparar com Barueri",
+                options=municipios_exibidos,
+                default=[],
+                key="municipios_comparacao_evolucao"
+            )
+        )
+
+
+        # ==========================================
+        # INDICADOR
+        # ==========================================
+
+        indicadores = {
+            "IDEB":
+                "IDEB",
+
+            "Matemática":
+                "Matemática",
+
+            "Língua Portuguesa":
+                "Língua Portuguesa",
+
+            "Nota Média Padronizada (N)":
+                "N",
+
+            "Indicador de Rendimento (P)":
+                "P",
+
+            "Taxa de Aprovação Geral":
+                "Aprovação Geral"
+        }
+
+
+        indicador_escolhido = st.selectbox(
+            "Indicador",
+            options=list(
+                indicadores.keys()
+            ),
+            index=0,
+            key="indicador_evolucao"
+        )
+
+
+        coluna_indicador = indicadores[
+            indicador_escolhido
+        ]
+
+
+        # ==========================================
+        # PREPARAÇÃO DOS DADOS DE BARUERI
+        # ==========================================
+
+        dados_barueri[
+            "Comparação"
+        ] = (
+            "Barueri - Municipal"
+        )
+
+
+        partes_comparacao = [
+            dados_barueri
+        ]
+
+
+        # ==========================================
+        # MUNICÍPIOS COMPARADOS
+        # ==========================================
+
+        for municipio in municipios_comparacao:
+
+            dados_municipio = dados_rede[
+                dados_rede["Município"]
+                == municipio
+            ].copy()
+
+
+            dados_municipio[
+                "Comparação"
+            ] = (
+                municipio
+                + " - "
+                + rede_comparacao
+            )
+
+
+            partes_comparacao.append(
+                dados_municipio
+            )
+
+
+        dados_grafico = pd.concat(
+            partes_comparacao,
+            ignore_index=True
+        )
+
+
+        # ==========================================
+        # FILTRAGEM DO INDICADOR
+        # ==========================================
+
+        dados_grafico = dados_grafico[
+            [
+                "Município",
+                "Rede",
+                "Comparação",
+                "Etapa",
+                "Ano",
+                coluna_indicador
+            ]
+        ].dropna(
+            subset=[
+                coluna_indicador
+            ]
+        )
+
+
+        # ==========================================
+        # ANOS COMO CATEGORIAS
+        # ==========================================
+
+        dados_grafico["Ano"] = (
+            dados_grafico["Ano"]
+            .astype(int)
+            .astype(str)
+        )
+
+
+        anos_grafico = [
+            str(ano)
+            for ano in anos_disponiveis
+            if (
+                ano_inicial
+                <= ano
+                <= ano_final
+            )
+        ]
+
+
+        # ==========================================
+        # RESUMO DA COMPARAÇÃO
+        # ==========================================
+
+        st.markdown(
+            "#### Comparação selecionada"
+        )
+
+
+        st.write(
+            "**Referência:** "
+            "Barueri — Municipal"
+        )
+
+
+        st.write(
+            "**Rede comparada:** "
+            f"{rede_comparacao}"
+        )
+
+
+        if municipios_comparacao:
+
+            st.write(
+                "**Municípios:** "
+                + " | ".join(
+                    municipios_comparacao
+                )
             )
 
         else:
 
-            # Preferência inicial por Municipal,
-            # quando disponível
-            if "Municipal" in redes_barueri:
-                indice_rede_barueri = (
-                    redes_barueri.index("Municipal")
-                )
-            else:
-                indice_rede_barueri = 0
-
-
-            rede_barueri = st.selectbox(
-                "Rede de Barueri",
-                options=redes_barueri,
-                index=indice_rede_barueri,
-                key="rede_barueri_evolucao"
+            st.caption(
+                "Nenhum município comparativo "
+                "selecionado."
             )
 
 
-            # ==========================================
-            # MUNICÍPIOS DISPONÍVEIS PARA COMPARAÇÃO
-            # ==========================================
-
-            lista_municipios = sorted(
-                dados_evolucao["Município"]
-                .dropna()
-                .unique()
-                .tolist()
-            )
+        st.caption(
+            f"Indicador: "
+            f"{indicador_escolhido}"
+        )
 
 
-            outros_municipios = [
-                municipio
-                for municipio in lista_municipios
-                if municipio != municipio_referencia
-            ]
+        # ==========================================
+        # GRÁFICOS POR ETAPA
+        # ==========================================
 
+        for etapa in etapas_selecionadas:
 
-            municipios_comparacao = st.multiselect(
-                "Municípios para comparar com Barueri",
-                options=outros_municipios,
-                default=[],
-                key="municipios_comparacao_evolucao"
-            )
-
-
-            # ==========================================
-            # REDE DE CADA MUNICÍPIO COMPARADO
-            # ==========================================
-
-            redes_comparacao = {}
-
-
-            for municipio in municipios_comparacao:
-
-                redes_disponiveis = sorted(
-                    dados_evolucao.loc[
-                        dados_evolucao["Município"]
-                        == municipio,
-                        "Rede"
-                    ]
-                    .dropna()
-                    .unique()
-                    .tolist()
-                )
-
-
-                if redes_disponiveis:
-
-                    # Se Pública existir, ela fica como
-                    # seleção inicial do município comparado
-                    if "Pública" in redes_disponiveis:
-                        indice_rede = (
-                            redes_disponiveis.index(
-                                "Pública"
-                            )
-                        )
-                    elif "Municipal" in redes_disponiveis:
-                        indice_rede = (
-                            redes_disponiveis.index(
-                                "Municipal"
-                            )
-                        )
-                    else:
-                        indice_rede = 0
-
-
-                    rede_escolhida = st.selectbox(
-                        f"Rede de {municipio}",
-                        options=redes_disponiveis,
-                        index=indice_rede,
-                        key=(
-                            "rede_comparacao_"
-                            + municipio
-                        )
-                    )
-
-
-                    redes_comparacao[
-                        municipio
-                    ] = rede_escolhida
-
-
-            # ==========================================
-            # INDICADOR
-            # ==========================================
-
-            indicadores = {
-                "IDEB": "IDEB",
-                "Matemática": "Matemática",
-                "Língua Portuguesa": "Língua Portuguesa",
-                "Nota Média Padronizada (N)": "N",
-                "Indicador de Rendimento (P)": "P",
-                "Taxa de Aprovação Geral":
-                    "Aprovação Geral"
-            }
-
-
-            indicador_escolhido = st.selectbox(
-                "Indicador",
-                options=list(
-                    indicadores.keys()
-                ),
-                index=0,
-                key="indicador_evolucao"
-            )
-
-
-            coluna_indicador = indicadores[
-                indicador_escolhido
-            ]
-
-
-            # ==========================================
-            # DADOS DE BARUERI
-            # ==========================================
-
-            dados_barueri = dados_evolucao[
-                (
-                    dados_evolucao["Município"]
-                    == municipio_referencia
-                )
-                &
-                (
-                    dados_evolucao["Rede"]
-                    == rede_barueri
-                )
+            dados_etapa = dados_grafico[
+                dados_grafico["Etapa"]
+                == etapa
             ].copy()
 
 
-            # Identificação usada no gráfico
-            dados_barueri[
-                "Comparação"
-            ] = (
-                municipio_referencia
-                + " - "
-                + rede_barueri
-            )
-
-
-            # ==========================================
-            # DADOS DOS MUNICÍPIOS COMPARADOS
-            # ==========================================
-
-            partes_comparacao = [
-                dados_barueri
-            ]
-
-
-            for municipio, rede in (
-                redes_comparacao.items()
-            ):
-
-                dados_municipio = dados_evolucao[
-                    (
-                        dados_evolucao["Município"]
-                        == municipio
-                    )
-                    &
-                    (
-                        dados_evolucao["Rede"]
-                        == rede
-                    )
-                ].copy()
-
-
-                dados_municipio[
-                    "Comparação"
-                ] = (
-                    municipio
-                    + " - "
-                    + rede
-                )
-
-
-                partes_comparacao.append(
-                    dados_municipio
-                )
-
-
-            dados_grafico = pd.concat(
-                partes_comparacao,
-                ignore_index=True
-            )
-
-
-            # ==========================================
-            # FILTRAGEM DO INDICADOR
-            # ==========================================
-
-            dados_grafico = dados_grafico[
-                [
-                    "Município",
-                    "Rede",
-                    "Comparação",
-                    "Etapa",
-                    "Ano",
-                    coluna_indicador
-                ]
-            ].dropna(
-                subset=[
-                    coluna_indicador
-                ]
-            )
-
-
-            # ==========================================
-            # ANOS COMO CATEGORIAS
-            # ==========================================
-
-            dados_grafico["Ano"] = (
-                dados_grafico["Ano"]
-                .astype(int)
-                .astype(str)
-            )
-
-
-            anos_grafico = [
-                str(ano)
-                for ano in anos_disponiveis
-                if (
-                    ano_inicial
-                    <= ano
-                    <= ano_final
-                )
-            ]
-
-
-            # ==========================================
-            # RESUMO DA SELEÇÃO
-            # ==========================================
-
             st.markdown(
-                "#### Comparação selecionada"
+                f"##### {etapa}"
             )
 
 
-            st.write(
-                f"**Barueri:** {rede_barueri}"
-            )
+            if dados_etapa.empty:
 
-
-            if redes_comparacao:
-
-                for municipio, rede in (
-                    redes_comparacao.items()
-                ):
-
-                    st.write(
-                        f"**{municipio}:** {rede}"
-                    )
-
-            else:
-
-                st.caption(
-                    "Nenhum outro município "
-                    "selecionado."
+                st.warning(
+                    "Não há resultados "
+                    "disponíveis para esta "
+                    "etapa e os filtros "
+                    "selecionados."
                 )
 
-
-            st.caption(
-                f"Indicador: "
-                f"{indicador_escolhido}"
-            )
+                continue
 
 
-            # ==========================================
-            # GRÁFICOS POR ETAPA
-            # ==========================================
+            grafico = alt.Chart(
+                dados_etapa
+            ).mark_line(
+                point=True
+            ).encode(
 
-            for etapa in etapas_selecionadas:
-
-                dados_etapa = dados_grafico[
-                    dados_grafico["Etapa"]
-                    == etapa
-                ].copy()
-
-
-                st.markdown(
-                    f"##### {etapa}"
-                )
-
-
-                if dados_etapa.empty:
-
-                    st.warning(
-                        "Não há resultados "
-                        "disponíveis para esta "
-                        "etapa e os filtros "
-                        "selecionados."
+                x=alt.X(
+                    "Ano:O",
+                    title="Ano",
+                    sort=anos_grafico,
+                    axis=alt.Axis(
+                        labelAngle=0
                     )
+                ),
 
-                    continue
+                y=alt.Y(
+                    f"{coluna_indicador}:Q",
+                    title=indicador_escolhido,
+                    scale=alt.Scale(
+                        zero=False
+                    )
+                ),
 
+                color=alt.Color(
+                    "Comparação:N",
+                    title=(
+                        "Município / Rede"
+                    )
+                ),
 
-                grafico = alt.Chart(
-                    dados_etapa
-                ).mark_line(
-                    point=True
-                ).encode(
+                strokeWidth=alt.condition(
+                    (
+                        alt.datum.Município
+                        == municipio_referencia
+                    ),
+                    alt.value(4),
+                    alt.value(2)
+                ),
 
-                    x=alt.X(
+                tooltip=[
+                    alt.Tooltip(
+                        "Município:N",
+                        title="Município"
+                    ),
+
+                    alt.Tooltip(
+                        "Rede:N",
+                        title="Rede"
+                    ),
+
+                    alt.Tooltip(
                         "Ano:O",
-                        title="Ano",
-                        sort=anos_grafico,
-                        axis=alt.Axis(
-                            labelAngle=0
-                        )
+                        title="Ano"
                     ),
 
-                    y=alt.Y(
+                    alt.Tooltip(
                         f"{coluna_indicador}:Q",
-                        title=indicador_escolhido,
-                        scale=alt.Scale(
-                            zero=False
-                        )
-                    ),
-
-                    color=alt.Color(
-                        "Comparação:N",
                         title=(
-                            "Município / Rede"
-                        )
-                    ),
-
-                    strokeWidth=alt.condition(
-                        (
-                            alt.datum.Município
-                            == municipio_referencia
+                            indicador_escolhido
                         ),
-                        alt.value(4),
-                        alt.value(2)
-                    ),
-
-                    tooltip=[
-                        alt.Tooltip(
-                            "Município:N",
-                            title="Município"
-                        ),
-                        alt.Tooltip(
-                            "Rede:N",
-                            title="Rede"
-                        ),
-                        alt.Tooltip(
-                            "Ano:O",
-                            title="Ano"
-                        ),
-                        alt.Tooltip(
-                            f"{coluna_indicador}:Q",
-                            title=(
-                                indicador_escolhido
-                            ),
-                            format=".2f"
-                        )
-                    ]
-                ).properties(
-                    height=430
-                )
-
-
-                st.altair_chart(
-                    grafico,
-                    use_container_width=True
-                )
-
-
-            st.caption(
-                "Cada município utiliza "
-                "exclusivamente os resultados "
-                "da rede selecionada. "
-                "Os registros de Pública, "
-                "Municipal e Estadual são "
-                "mantidos separadamente, "
-                "conforme disponíveis na base."
+                        format=".2f"
+                    )
+                ]
+            ).properties(
+                height=430
             )
+
+
+            st.altair_chart(
+                grafico,
+                use_container_width=True
+            )
+
+
+        st.caption(
+            "Barueri utiliza a Rede Municipal "
+            "como referência. Os municípios "
+            "selecionados utilizam exclusivamente "
+            "os resultados da rede escolhida. "
+            "Pública, Municipal e Estadual são "
+            "mantidas como categorias distintas "
+            "da base original."
+        )
 
 
     else:
