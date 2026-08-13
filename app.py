@@ -2549,7 +2549,7 @@ with aba_municipios:
 
 
                 # ==================================
-                # PREPARAÇÃO
+                # PREPARAÇÃO DOS DADOS
                 # ==================================
 
                 dados_saeb = (
@@ -2682,7 +2682,9 @@ with aba_municipios:
 
 
                 # ==================================
-                # ESCALA DINÂMICA DA PROFICIÊNCIA
+                # ESCALA NORMAL DAS PROFICIÊNCIAS
+                #
+                # USADA SOMENTE NO GRÁFICO DE LINHAS
                 # ==================================
 
                 def escala_prof_saeb(
@@ -2714,11 +2716,11 @@ with aba_municipios:
 
                     inferior = max(
                         0,
-                        minimo - 10
+                        minimo - 5
                     )
 
                     superior = (
-                        maximo + 10
+                        maximo + 5
                     )
 
 
@@ -2741,11 +2743,9 @@ with aba_municipios:
                     )
 
 
-                    # mínimo de 30 pontos
-                    # de amplitude visual
                     if (
                         superior - inferior
-                        < 30
+                        < 15
                     ):
 
                         centro = (
@@ -2754,11 +2754,11 @@ with aba_municipios:
 
                         inferior = max(
                             0,
-                            centro - 15
+                            centro - 7.5
                         )
 
                         superior = (
-                            centro + 15
+                            centro + 7.5
                         )
 
 
@@ -2769,7 +2769,9 @@ with aba_municipios:
 
 
                 # ==================================
-                # ESCALA DINÂMICA DO N
+                # ESCALA NORMAL DO N
+                #
+                # USADA SOMENTE NO GRÁFICO DE N
                 # ==================================
 
                 def escala_n_saeb(
@@ -2801,39 +2803,18 @@ with aba_municipios:
 
                     inferior = max(
                         0,
-                        minimo - 0.20
+                        minimo - 0.10
                     )
 
                     superior = min(
                         10,
-                        maximo + 0.20
+                        maximo + 0.10
                     )
 
 
-                    inferior = (
-                        int(
-                            inferior * 10
-                        )
-                        / 10
-                    )
-
-
-                    superior = (
-                        int(
-                            (
-                                superior * 10
-                            )
-                            + 0.999
-                        )
-                        / 10
-                    )
-
-
-                    # evita escala excessivamente
-                    # apertada
                     if (
                         superior - inferior
-                        < 0.8
+                        < 0.30
                     ):
 
                         centro = (
@@ -2842,12 +2823,220 @@ with aba_municipios:
 
                         inferior = max(
                             0,
-                            centro - 0.4
+                            centro - 0.15
                         )
 
                         superior = min(
                             10,
-                            centro + 0.4
+                            centro + 0.15
+                        )
+
+
+                    return (
+                        round(inferior, 2),
+                        round(superior, 2)
+                    )
+
+
+                # ==================================
+                # ESCALA POSICIONAL DA PROFICIÊNCIA
+                #
+                # GRÁFICO COMBINADO
+                #
+                # OBJETIVO:
+                # MAIOR COLUNA EM ~68% DA ALTURA
+                # ==================================
+
+                def escala_prof_combinada(
+                    valores
+                ):
+
+                    serie = (
+                        pd.to_numeric(
+                            valores,
+                            errors="coerce"
+                        )
+                        .dropna()
+                    )
+
+
+                    if serie.empty:
+
+                        return 0, 400
+
+
+                    minimo = float(
+                        serie.min()
+                    )
+
+                    maximo = float(
+                        serie.max()
+                    )
+
+
+                    amplitude = max(
+                        maximo - minimo,
+                        10
+                    )
+
+
+                    # Pequena margem inferior
+                    inferior = max(
+                        0,
+                        minimo - (
+                            amplitude * 0.20
+                        )
+                    )
+
+
+                    # Queremos que maximo fique
+                    # aproximadamente em 68%
+                    # da área vertical.
+                    fracao_superior_colunas = 0.68
+
+
+                    superior = (
+                        inferior
+                        + (
+                            (
+                                maximo - inferior
+                            )
+                            /
+                            fracao_superior_colunas
+                        )
+                    )
+
+
+                    # Segurança para não ficar
+                    # excessivamente apertado
+                    if superior <= maximo:
+
+                        superior = (
+                            maximo + 10
+                        )
+
+
+                    return (
+                        round(inferior, 1),
+                        round(superior, 1)
+                    )
+
+
+                # ==================================
+                # ESCALA POSICIONAL DO N
+                #
+                # GRÁFICO COMBINADO
+                #
+                # OBJETIVO:
+                # MENOR N EM ~76%
+                # MAIOR N EM ~94%
+                # ==================================
+
+                def escala_n_superior(
+                    valores
+                ):
+
+                    serie = (
+                        pd.to_numeric(
+                            valores,
+                            errors="coerce"
+                        )
+                        .dropna()
+                    )
+
+
+                    if serie.empty:
+
+                        return 0, 10
+
+
+                    minimo = float(
+                        serie.min()
+                    )
+
+                    maximo = float(
+                        serie.max()
+                    )
+
+
+                    # Se houver somente um valor
+                    # ou valores praticamente iguais,
+                    # criamos uma pequena amplitude
+                    if abs(
+                        maximo - minimo
+                    ) < 0.01:
+
+                        minimo_ajustado = (
+                            minimo - 0.05
+                        )
+
+                        maximo_ajustado = (
+                            maximo + 0.05
+                        )
+
+                    else:
+
+                        minimo_ajustado = minimo
+
+                        maximo_ajustado = maximo
+
+
+                    # Posições desejadas dentro
+                    # da altura do gráfico
+                    posicao_minima = 0.76
+                    posicao_maxima = 0.94
+
+
+                    diferenca_posicao = (
+                        posicao_maxima
+                        - posicao_minima
+                    )
+
+
+                    amplitude_eixo = (
+                        (
+                            maximo_ajustado
+                            - minimo_ajustado
+                        )
+                        /
+                        diferenca_posicao
+                    )
+
+
+                    inferior = (
+                        minimo_ajustado
+                        - (
+                            posicao_minima
+                            * amplitude_eixo
+                        )
+                    )
+
+
+                    superior = (
+                        inferior
+                        + amplitude_eixo
+                    )
+
+
+                    # N deve permanecer em uma
+                    # faixa válida de 0 a 10
+                    inferior = max(
+                        0,
+                        inferior
+                    )
+
+                    superior = min(
+                        10,
+                        superior
+                    )
+
+
+                    # Segurança extra
+                    if superior <= maximo:
+
+                        superior = min(
+                            10,
+                            maximo + 0.10
                         )
 
 
@@ -3361,8 +3550,10 @@ with aba_municipios:
                 # COLUNAS = LP / MAT
                 # LINHAS = N
                 #
-                # EIXO ESQUERDO = PROFICIÊNCIA
-                # EIXO DIREITO = N
+                # LP / MAT OCUPAM A PARTE
+                # INFERIOR / CENTRAL
+                #
+                # N OCUPA A FAIXA SUPERIOR
                 # ==================================
 
                 else:
@@ -3379,12 +3570,10 @@ with aba_municipios:
 
                         st.caption(
                             "As colunas representam as "
-                            "proficiências de Língua "
-                            "Portuguesa e Matemática. "
-                            "As linhas representam a Nota "
-                            "Média Padronizada (N). "
-                            "Os dois indicadores utilizam "
-                            "escalas verticais independentes."
+                            "proficiências. As linhas de N "
+                            "são posicionadas na faixa "
+                            "superior do gráfico para "
+                            "evitar sobreposição visual."
                         )
 
 
@@ -3426,7 +3615,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # DADOS DAS PROFICIÊNCIAS
+                            # PROFICIÊNCIAS
                             # ======================
 
                             dados_colunas = (
@@ -3475,7 +3664,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # DADOS DE N
+                            # N
                             # ======================
 
                             dados_linha_n = (
@@ -3501,35 +3690,30 @@ with aba_municipios:
                             )
 
 
-                            if dados_colunas.empty:
+                            if (
+                                dados_colunas.empty
+                                or
+                                dados_linha_n.empty
+                            ):
 
                                 st.info(
-                                    "Não há proficiências "
-                                    "disponíveis para esta etapa."
-                                )
-
-                                continue
-
-
-                            if dados_linha_n.empty:
-
-                                st.info(
-                                    "Não há valores de N "
-                                    "disponíveis para esta etapa."
+                                    "Não há resultados "
+                                    "simultâneos das "
+                                    "proficiências e de N."
                                 )
 
                                 continue
 
 
                             # ======================
-                            # ESCALA PROFICIÊNCIA
-                            # EIXO ESQUERDO
+                            # ESCALA POSICIONAL
+                            # DAS COLUNAS
                             # ======================
 
                             (
-                                prof_min,
-                                prof_max
-                            ) = escala_prof_saeb(
+                                prof_min_comb,
+                                prof_max_comb
+                            ) = escala_prof_combinada(
                                 dados_colunas[
                                     "Proficiência"
                                 ]
@@ -3537,14 +3721,14 @@ with aba_municipios:
 
 
                             # ======================
-                            # ESCALA N
-                            # EIXO DIREITO
+                            # ESCALA POSICIONAL
+                            # DE N
                             # ======================
 
                             (
-                                n_min,
-                                n_max
-                            ) = escala_n_saeb(
+                                n_min_comb,
+                                n_max_comb
+                            ) = escala_n_superior(
                                 dados_linha_n[
                                     "N"
                                 ]
@@ -3552,7 +3736,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # ORDEM DAS COLUNAS
+                            # ORDEM
                             # ======================
 
                             ordem_series = []
@@ -3572,7 +3756,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # COLUNAS LP / MAT
+                            # COLUNAS
                             # ======================
 
                             barras_prof = (
@@ -3605,8 +3789,8 @@ with aba_municipios:
                                         ),
                                         scale=alt.Scale(
                                             domain=[
-                                                prof_min,
-                                                prof_max
+                                                prof_min_comb,
+                                                prof_max_comb
                                             ],
                                             zero=False
                                         ),
@@ -3689,8 +3873,8 @@ with aba_municipios:
                                         "Proficiência:Q",
                                         scale=alt.Scale(
                                             domain=[
-                                                prof_min,
-                                                prof_max
+                                                prof_min_comb,
+                                                prof_max_comb
                                             ],
                                             zero=False
                                         )
@@ -3712,7 +3896,8 @@ with aba_municipios:
 
                             # ======================
                             # LINHA N
-                            # EIXO DIREITO
+                            #
+                            # POSICIONADA NO TOPO
                             # ======================
 
                             linhas_n_combinadas = (
@@ -3738,8 +3923,8 @@ with aba_municipios:
                                         ),
                                         scale=alt.Scale(
                                             domain=[
-                                                n_min,
-                                                n_max
+                                                n_min_comb,
+                                                n_max_comb
                                             ],
                                             zero=False
                                         ),
@@ -3794,7 +3979,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # RÓTULOS DO N
+                            # VALORES DE N
                             # ======================
 
                             valores_n_combinados = (
@@ -3816,8 +4001,8 @@ with aba_municipios:
                                         "N:Q",
                                         scale=alt.Scale(
                                             domain=[
-                                                n_min,
-                                                n_max
+                                                n_min_comb,
+                                                n_max_comb
                                             ],
                                             zero=False
                                         )
@@ -3845,9 +4030,6 @@ with aba_municipios:
 
                             # ======================
                             # GRÁFICO FINAL
-                            #
-                            # Y = INDEPENDENTE
-                            # COLOR = INDEPENDENTE
                             # ======================
 
                             grafico_combinado = (
@@ -3862,7 +4044,7 @@ with aba_municipios:
                                     color="independent"
                                 )
                                 .properties(
-                                    height=500
+                                    height=520
                                 )
                             )
 
@@ -3874,16 +4056,16 @@ with aba_municipios:
 
 
                             # ======================
-                            # INFORMAÇÃO DAS ESCALAS
+                            # CONFERÊNCIA DAS ESCALAS
                             # ======================
 
                             st.caption(
-                                f"Escala da proficiência: "
-                                f"{prof_min:.0f} a "
-                                f"{prof_max:.0f} pontos | "
-                                f"Escala de N: "
-                                f"{n_min:.2f} a "
-                                f"{n_max:.2f}"
+                                f"Proficiência: "
+                                f"{prof_min_comb:.1f} a "
+                                f"{prof_max_comb:.1f} | "
+                                f"N: "
+                                f"{n_min_comb:.2f} a "
+                                f"{n_max_comb:.2f}"
                             )
 
 
