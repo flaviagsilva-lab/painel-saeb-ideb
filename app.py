@@ -2596,7 +2596,7 @@ with aba_municipios:
 
 
                 # ==================================
-                # MUNICÍPIOS ESPERADOS
+                # ORDEM DOS MUNICÍPIOS
                 # ==================================
 
                 comparacoes_saeb = [
@@ -2623,6 +2623,7 @@ with aba_municipios:
                 ):
 
                     if pd.isna(valor):
+
                         return None
 
 
@@ -2644,10 +2645,13 @@ with aba_municipios:
                             (350, "Nível 9")
                         ]
 
+
                         for limite, nivel in limites:
 
                             if valor < limite:
+
                                 return nivel
+
 
                         return "Nível 10"
 
@@ -2666,16 +2670,19 @@ with aba_municipios:
                             (400, "Nível 8")
                         ]
 
+
                         for limite, nivel in limites:
 
                             if valor < limite:
+
                                 return nivel
+
 
                         return "Nível 9"
 
 
                 # ==================================
-                # ESCALA SAEB
+                # ESCALA DAS PROFICIÊNCIAS
                 # ==================================
 
                 def escala_prof_saeb(
@@ -2760,7 +2767,7 @@ with aba_municipios:
 
 
                 # ==================================
-                # ESCALA N
+                # ESCALA DO N
                 # ==================================
 
                 def escala_n_saeb(
@@ -2847,7 +2854,8 @@ with aba_municipios:
 
 
                 # ==================================
-                # 1. LP × MATEMÁTICA — LINHAS
+                # 1. LP × MATEMÁTICA
+                # MESMO GRÁFICO
                 # ==================================
 
                 if (
@@ -2862,12 +2870,13 @@ with aba_municipios:
                             "uma disciplina."
                         )
 
+
                     else:
 
                         st.caption(
-                            "Selecione uma ou as duas "
-                            "disciplinas para acompanhar "
-                            "a evolução das proficiências."
+                            "As cores identificam os "
+                            "municípios. O tipo da linha "
+                            "identifica a disciplina."
                         )
 
 
@@ -2880,251 +2889,289 @@ with aba_municipios:
 
                             dados_etapa = (
                                 dados_saeb[
-                                    dados_saeb["Etapa"]
+                                    dados_saeb[
+                                        "Etapa"
+                                    ]
                                     == etapa
                                 ]
                                 .copy()
                             )
 
 
-                            for comparacao in comparacoes_saeb:
+                            colunas_validas = [
+                                disciplina
+                                for disciplina
+                                in disciplinas_saeb
+                                if disciplina
+                                in dados_etapa.columns
+                            ]
 
-                                dados_municipio = (
-                                    dados_etapa[
-                                        dados_etapa[
-                                            "Comparação"
-                                        ]
-                                        == comparacao
-                                    ]
-                                    .copy()
+
+                            if not colunas_validas:
+
+                                st.info(
+                                    "Não há proficiências "
+                                    "disponíveis para esta etapa."
                                 )
 
-
-                                if dados_municipio.empty:
-
-                                    continue
+                                continue
 
 
-                                colunas_validas = [
-                                    disciplina
-                                    for disciplina
-                                    in disciplinas_saeb
-                                    if disciplina
-                                    in dados_municipio.columns
+                            dados_long = (
+                                dados_etapa[
+                                    [
+                                        "Ano",
+                                        "Município",
+                                        "Rede",
+                                        "Comparação",
+                                        *colunas_validas
+                                    ]
                                 ]
-
-
-                                if not colunas_validas:
-
-                                    continue
-
-
-                                dados_long = (
-                                    dados_municipio[
-                                        [
-                                            "Ano",
-                                            *colunas_validas
-                                        ]
-                                    ]
-                                    .melt(
-                                        id_vars="Ano",
-                                        value_vars=(
-                                            colunas_validas
-                                        ),
-                                        var_name="Disciplina",
-                                        value_name="Proficiência"
-                                    )
-                                    .dropna(
-                                        subset=[
-                                            "Proficiência"
-                                        ]
-                                    )
+                                .melt(
+                                    id_vars=[
+                                        "Ano",
+                                        "Município",
+                                        "Rede",
+                                        "Comparação"
+                                    ],
+                                    value_vars=(
+                                        colunas_validas
+                                    ),
+                                    var_name="Disciplina",
+                                    value_name="Proficiência"
                                 )
-
-
-                                if dados_long.empty:
-
-                                    continue
-
-
-                                dados_long[
-                                    "Nível"
-                                ] = dados_long.apply(
-                                    lambda linha:
-                                        classificar_nivel_saeb(
-                                            linha[
-                                                "Proficiência"
-                                            ],
-                                            etapa
-                                        ),
-                                    axis=1
-                                )
-
-
-                                (
-                                    prof_min,
-                                    prof_max
-                                ) = escala_prof_saeb(
-                                    dados_long[
+                                .dropna(
+                                    subset=[
                                         "Proficiência"
                                     ]
                                 )
+                                .copy()
+                            )
 
 
-                                st.markdown(
-                                    f"##### {comparacao}"
+                            if dados_long.empty:
+
+                                st.info(
+                                    "Não há resultados "
+                                    "disponíveis para esta etapa."
                                 )
 
+                                continue
 
-                                # ==================
-                                # LINHAS
-                                # ==================
 
-                                linhas_prof = (
-                                    alt.Chart(
-                                        dados_long
-                                    )
-                                    .mark_line(
-                                        point=True,
-                                        strokeWidth=3
-                                    )
-                                    .encode(
+                            dados_long["Nível"] = (
+                                dados_long[
+                                    "Proficiência"
+                                ]
+                                .apply(
+                                    lambda valor:
+                                        classificar_nivel_saeb(
+                                            valor,
+                                            etapa
+                                        )
+                                )
+                            )
 
-                                        x=alt.X(
-                                            "Ano:O",
-                                            title="Ano",
-                                            sort=anos_saeb,
-                                            axis=alt.Axis(
-                                                labelAngle=0
-                                            )
+
+                            dados_long[
+                                "Série gráfica"
+                            ] = (
+                                dados_long[
+                                    "Comparação"
+                                ]
+                                + " | "
+                                + dados_long[
+                                    "Disciplina"
+                                ]
+                            )
+
+
+                            (
+                                prof_min,
+                                prof_max
+                            ) = escala_prof_saeb(
+                                dados_long[
+                                    "Proficiência"
+                                ]
+                            )
+
+
+                            # ======================
+                            # LINHAS
+                            # COR = MUNICÍPIO
+                            # TRACEJADO = DISCIPLINA
+                            # ======================
+
+                            linhas_prof = (
+                                alt.Chart(
+                                    dados_long
+                                )
+                                .mark_line(
+                                    point=True,
+                                    strokeWidth=3
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        title="Ano",
+                                        sort=anos_saeb,
+                                        axis=alt.Axis(
+                                            labelAngle=0
+                                        )
+                                    ),
+
+                                    y=alt.Y(
+                                        "Proficiência:Q",
+                                        title=(
+                                            "Proficiência SAEB"
+                                        ),
+                                        scale=alt.Scale(
+                                            domain=[
+                                                prof_min,
+                                                prof_max
+                                            ]
+                                        )
+                                    ),
+
+                                    color=alt.Color(
+                                        "Comparação:N",
+                                        title=(
+                                            "Município / Rede"
+                                        ),
+                                        sort=(
+                                            comparacoes_saeb
+                                        ),
+                                        legend=alt.Legend(
+                                            orient="bottom",
+                                            direction="horizontal"
+                                        )
+                                    ),
+
+                                    strokeDash=alt.StrokeDash(
+                                        "Disciplina:N",
+                                        title="Disciplina",
+                                        scale=alt.Scale(
+                                            domain=[
+                                                "Língua Portuguesa",
+                                                "Matemática"
+                                            ],
+                                            range=[
+                                                [1, 0],
+                                                [8, 4]
+                                            ]
+                                        ),
+                                        legend=alt.Legend(
+                                            orient="bottom",
+                                            direction="horizontal"
+                                        )
+                                    ),
+
+                                    detail=alt.Detail(
+                                        "Série gráfica:N"
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Município:N",
+                                            title="Município"
                                         ),
 
-                                        y=alt.Y(
-                                            "Proficiência:Q",
-                                            title=(
-                                                "Proficiência SAEB"
-                                            ),
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    prof_min,
-                                                    prof_max
-                                                ]
-                                            )
+                                        alt.Tooltip(
+                                            "Rede:N",
+                                            title="Rede"
                                         ),
 
-                                        color=alt.Color(
+                                        alt.Tooltip(
                                             "Disciplina:N",
-                                            title="Disciplina",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    "Língua Portuguesa",
-                                                    "Matemática"
-                                                ],
-                                                range=[
-                                                    "#D46A8A",
-                                                    "#8A6BC1"
-                                                ]
-                                            ),
-                                            legend=alt.Legend(
-                                                orient="bottom",
-                                                direction="horizontal"
-                                            )
+                                            title="Disciplina"
                                         ),
 
-                                        tooltip=[
-                                            alt.Tooltip(
-                                                "Ano:O",
-                                                title="Ano"
-                                            ),
-
-                                            alt.Tooltip(
-                                                "Disciplina:N",
-                                                title="Disciplina"
-                                            ),
-
-                                            alt.Tooltip(
-                                                "Proficiência:Q",
-                                                title="Proficiência",
-                                                format=".2f"
-                                            ),
-
-                                            alt.Tooltip(
-                                                "Nível:N",
-                                                title="Nível"
-                                            )
-                                        ]
-                                    )
-                                )
-
-
-                                # ==================
-                                # VALORES
-                                # ==================
-
-                                rotulos_prof = (
-                                    alt.Chart(
-                                        dados_long
-                                    )
-                                    .mark_text(
-                                        dy=-12,
-                                        fontSize=10
-                                    )
-                                    .encode(
-
-                                        x=alt.X(
+                                        alt.Tooltip(
                                             "Ano:O",
-                                            sort=anos_saeb
+                                            title="Ano"
                                         ),
 
-                                        y=alt.Y(
+                                        alt.Tooltip(
                                             "Proficiência:Q",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    prof_min,
-                                                    prof_max
-                                                ]
-                                            )
-                                        ),
-
-                                        text=alt.Text(
-                                            "Proficiência:Q",
+                                            title="Proficiência",
                                             format=".2f"
                                         ),
 
-                                        color=alt.Color(
-                                            "Disciplina:N",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    "Língua Portuguesa",
-                                                    "Matemática"
-                                                ],
-                                                range=[
-                                                    "#D46A8A",
-                                                    "#8A6BC1"
-                                                ]
-                                            ),
-                                            legend=None
+                                        alt.Tooltip(
+                                            "Nível:N",
+                                            title="Nível"
                                         )
+                                    ]
+                                )
+                            )
+
+
+                            # ======================
+                            # VALORES
+                            # ======================
+
+                            rotulos_prof = (
+                                alt.Chart(
+                                    dados_long
+                                )
+                                .mark_text(
+                                    dy=-11,
+                                    fontSize=9
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        sort=anos_saeb
+                                    ),
+
+                                    y=alt.Y(
+                                        "Proficiência:Q",
+                                        scale=alt.Scale(
+                                            domain=[
+                                                prof_min,
+                                                prof_max
+                                            ]
+                                        )
+                                    ),
+
+                                    text=alt.Text(
+                                        "Proficiência:Q",
+                                        format=".2f"
+                                    ),
+
+                                    color=alt.Color(
+                                        "Comparação:N",
+                                        sort=(
+                                            comparacoes_saeb
+                                        ),
+                                        legend=None
+                                    ),
+
+                                    detail=alt.Detail(
+                                        "Série gráfica:N"
                                     )
                                 )
+                            )
 
 
-                                grafico_prof = (
-                                    linhas_prof
-                                    + rotulos_prof
-                                ).properties(
-                                    height=430
-                                )
+                            grafico_prof = (
+                                linhas_prof
+                                + rotulos_prof
+                            ).properties(
+                                height=470
+                            )
 
 
-                                st.altair_chart(
-                                    grafico_prof,
-                                    use_container_width=True
-                                )
+                            st.altair_chart(
+                                grafico_prof,
+                                use_container_width=True
+                            )
 
 
                 # ==================================
-                # 2. NOTA MÉDIA PADRONIZADA N
+                # 2. NOTA MÉDIA PADRONIZADA (N)
                 # ==================================
 
                 elif (
@@ -3133,9 +3180,8 @@ with aba_municipios:
                 ):
 
                     st.caption(
-                        "As linhas permitem comparar "
-                        "a evolução da Nota Média "
-                        "Padronizada (N)."
+                        "Cada linha representa um "
+                        "município/rede."
                     )
 
 
@@ -3148,7 +3194,9 @@ with aba_municipios:
 
                         dados_n = (
                             dados_saeb[
-                                dados_saeb["Etapa"]
+                                dados_saeb[
+                                    "Etapa"
+                                ]
                                 == etapa
                             ]
                             [
@@ -3226,19 +3274,13 @@ with aba_municipios:
                                     title=(
                                         "Município / Rede"
                                     ),
+                                    sort=(
+                                        comparacoes_saeb
+                                    ),
                                     legend=alt.Legend(
                                         orient="bottom",
                                         direction="horizontal"
                                     )
-                                ),
-
-                                strokeWidth=alt.condition(
-                                    (
-                                        alt.datum.Município
-                                        == municipio_referencia
-                                    ),
-                                    alt.value(4),
-                                    alt.value(2)
                                 ),
 
                                 tooltip=[
@@ -3273,7 +3315,7 @@ with aba_municipios:
                             )
                             .mark_text(
                                 dy=-12,
-                                fontSize=10
+                                fontSize=9
                             )
                             .encode(
 
@@ -3297,6 +3339,14 @@ with aba_municipios:
                                     format=".2f"
                                 ),
 
+                                color=alt.Color(
+                                    "Comparação:N",
+                                    sort=(
+                                        comparacoes_saeb
+                                    ),
+                                    legend=None
+                                ),
+
                                 detail=alt.Detail(
                                     "Comparação:N"
                                 )
@@ -3308,7 +3358,7 @@ with aba_municipios:
                             linhas_n
                             + rotulos_n
                         ).properties(
-                            height=430
+                            height=450
                         )
 
 
@@ -3320,6 +3370,7 @@ with aba_municipios:
 
                 # ==================================
                 # 3. LP + MATEMÁTICA × N
+                # MESMO GRÁFICO
                 # ==================================
 
                 else:
@@ -3331,13 +3382,16 @@ with aba_municipios:
                             "uma disciplina."
                         )
 
+
                     else:
 
                         st.caption(
                             "As colunas representam as "
-                            "proficiências selecionadas e "
-                            "a linha representa a Nota "
-                            "Média Padronizada (N)."
+                            "proficiências e as linhas "
+                            "representam a Nota Média "
+                            "Padronizada (N). Todos os "
+                            "municípios selecionados são "
+                            "apresentados no mesmo gráfico."
                         )
 
 
@@ -3350,397 +3404,397 @@ with aba_municipios:
 
                             dados_etapa = (
                                 dados_saeb[
-                                    dados_saeb["Etapa"]
+                                    dados_saeb[
+                                        "Etapa"
+                                    ]
                                     == etapa
                                 ]
                                 .copy()
                             )
 
 
-                            for comparacao in comparacoes_saeb:
+                            colunas_validas = [
+                                disciplina
+                                for disciplina
+                                in disciplinas_saeb
+                                if disciplina
+                                in dados_etapa.columns
+                            ]
 
-                                st.markdown(
-                                    f"##### {comparacao}"
+
+                            if not colunas_validas:
+
+                                st.info(
+                                    "Não há proficiências "
+                                    "disponíveis para esta etapa."
                                 )
 
+                                continue
 
-                                dados_municipio = (
-                                    dados_etapa[
-                                        dados_etapa[
-                                            "Comparação"
-                                        ]
-                                        == comparacao
+
+                            # ======================
+                            # COLUNAS
+                            # ======================
+
+                            dados_colunas = (
+                                dados_etapa[
+                                    [
+                                        "Ano",
+                                        "Município",
+                                        "Rede",
+                                        "Comparação",
+                                        *colunas_validas
                                     ]
-                                    .copy()
-                                )
-
-
-                                if dados_municipio.empty:
-
-                                    st.caption(
-                                        "Não há resultados "
-                                        "para esta seleção."
-                                    )
-
-                                    continue
-
-
-                                colunas_validas = [
-                                    disciplina
-                                    for disciplina
-                                    in disciplinas_saeb
-                                    if disciplina
-                                    in dados_municipio.columns
                                 ]
-
-
-                                if not colunas_validas:
-
-                                    st.caption(
-                                        "Não há proficiências "
-                                        "disponíveis."
-                                    )
-
-                                    continue
-
-
-                                # ==================
-                                # PROFICIÊNCIAS
-                                # ==================
-
-                                dados_colunas = (
-                                    dados_municipio[
-                                        [
-                                            "Ano",
-                                            *colunas_validas
-                                        ]
-                                    ]
-                                    .melt(
-                                        id_vars="Ano",
-                                        value_vars=(
-                                            colunas_validas
-                                        ),
-                                        var_name="Disciplina",
-                                        value_name="Proficiência"
-                                    )
-                                    .dropna(
-                                        subset=[
-                                            "Proficiência"
-                                        ]
-                                    )
+                                .melt(
+                                    id_vars=[
+                                        "Ano",
+                                        "Município",
+                                        "Rede",
+                                        "Comparação"
+                                    ],
+                                    value_vars=(
+                                        colunas_validas
+                                    ),
+                                    var_name="Disciplina",
+                                    value_name="Proficiência"
                                 )
-
-
-                                # ==================
-                                # N
-                                # ==================
-
-                                dados_linha_n = (
-                                    dados_municipio[
-                                        [
-                                            "Ano",
-                                            "N"
-                                        ]
-                                    ]
-                                    .dropna(
-                                        subset=["N"]
-                                    )
-                                    .drop_duplicates(
-                                        subset=["Ano"]
-                                    )
-                                    .copy()
-                                )
-
-
-                                if (
-                                    dados_colunas.empty
-                                    or
-                                    dados_linha_n.empty
-                                ):
-
-                                    st.caption(
-                                        "Não há resultados "
-                                        "simultâneos das "
-                                        "proficiências e de N."
-                                    )
-
-                                    continue
-
-
-                                (
-                                    prof_min,
-                                    prof_max
-                                ) = escala_prof_saeb(
-                                    dados_colunas[
+                                .dropna(
+                                    subset=[
                                         "Proficiência"
                                     ]
                                 )
+                                .copy()
+                            )
 
 
-                                (
-                                    n_min,
-                                    n_max
-                                ) = escala_n_saeb(
-                                    dados_linha_n["N"]
+                            # Identificador único
+                            # município + disciplina
+                            dados_colunas[
+                                "Grupo"
+                            ] = (
+                                dados_colunas[
+                                    "Comparação"
+                                ]
+                                + " | "
+                                + dados_colunas[
+                                    "Disciplina"
+                                ]
+                            )
+
+
+                            # ======================
+                            # LINHAS DO N
+                            # ======================
+
+                            dados_linha_n = (
+                                dados_etapa[
+                                    [
+                                        "Ano",
+                                        "Município",
+                                        "Rede",
+                                        "Comparação",
+                                        "N"
+                                    ]
+                                ]
+                                .dropna(
+                                    subset=["N"]
+                                )
+                                .drop_duplicates(
+                                    subset=[
+                                        "Ano",
+                                        "Comparação"
+                                    ]
+                                )
+                                .copy()
+                            )
+
+
+                            if (
+                                dados_colunas.empty
+                                or
+                                dados_linha_n.empty
+                            ):
+
+                                st.info(
+                                    "Não há resultados "
+                                    "simultâneos das "
+                                    "proficiências e de N "
+                                    "para esta etapa."
                                 )
 
+                                continue
 
-                                # ==================
-                                # COLUNAS LP / MAT
-                                # ==================
 
-                                barras_prof = (
-                                    alt.Chart(
-                                        dados_colunas
-                                    )
-                                    .mark_bar(
-                                        opacity=0.82
-                                    )
-                                    .encode(
+                            (
+                                prof_min,
+                                prof_max
+                            ) = escala_prof_saeb(
+                                dados_colunas[
+                                    "Proficiência"
+                                ]
+                            )
 
-                                        x=alt.X(
-                                            "Ano:O",
-                                            title="Ano",
-                                            sort=anos_saeb,
-                                            axis=alt.Axis(
-                                                labelAngle=0
-                                            )
+
+                            (
+                                n_min,
+                                n_max
+                            ) = escala_n_saeb(
+                                dados_linha_n["N"]
+                            )
+
+
+                            # ======================
+                            # COLUNAS
+                            #
+                            # Cor = município
+                            # Opacidade = disciplina
+                            # ======================
+
+                            barras_prof = (
+                                alt.Chart(
+                                    dados_colunas
+                                )
+                                .mark_bar()
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        title="Ano",
+                                        sort=anos_saeb,
+                                        axis=alt.Axis(
+                                            labelAngle=0
+                                        )
+                                    ),
+
+                                    xOffset=alt.XOffset(
+                                        "Grupo:N"
+                                    ),
+
+                                    y=alt.Y(
+                                        "Proficiência:Q",
+                                        title=(
+                                            "Proficiência SAEB"
                                         ),
+                                        scale=alt.Scale(
+                                            domain=[
+                                                prof_min,
+                                                prof_max
+                                            ]
+                                        )
+                                    ),
 
-                                        xOffset=alt.XOffset(
-                                            "Disciplina:N",
-                                            sort=[
+                                    color=alt.Color(
+                                        "Comparação:N",
+                                        title=(
+                                            "Município / Rede"
+                                        ),
+                                        sort=(
+                                            comparacoes_saeb
+                                        ),
+                                        legend=alt.Legend(
+                                            orient="bottom",
+                                            direction="horizontal"
+                                        )
+                                    ),
+
+                                    opacity=alt.Opacity(
+                                        "Disciplina:N",
+                                        title="Disciplina",
+                                        scale=alt.Scale(
+                                            domain=[
                                                 "Língua Portuguesa",
                                                 "Matemática"
+                                            ],
+                                            range=[
+                                                0.55,
+                                                1.0
                                             ]
                                         ),
+                                        legend=alt.Legend(
+                                            orient="bottom",
+                                            direction="horizontal"
+                                        )
+                                    ),
 
-                                        y=alt.Y(
-                                            "Proficiência:Q",
-                                            title=(
-                                                "Proficiência SAEB"
-                                            ),
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    prof_min,
-                                                    prof_max
-                                                ]
-                                            )
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Município:N",
+                                            title="Município"
                                         ),
 
-                                        color=alt.Color(
+                                        alt.Tooltip(
+                                            "Rede:N",
+                                            title="Rede"
+                                        ),
+
+                                        alt.Tooltip(
                                             "Disciplina:N",
-                                            title="Disciplina",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    "Língua Portuguesa",
-                                                    "Matemática"
-                                                ],
-                                                range=[
-                                                    "#D46A8A",
-                                                    "#8A6BC1"
-                                                ]
-                                            ),
-                                            legend=alt.Legend(
-                                                orient="bottom",
-                                                direction="horizontal"
-                                            )
+                                            title="Disciplina"
                                         ),
 
-                                        tooltip=[
-                                            alt.Tooltip(
-                                                "Ano:O",
-                                                title="Ano"
-                                            ),
-
-                                            alt.Tooltip(
-                                                "Disciplina:N",
-                                                title="Disciplina"
-                                            ),
-
-                                            alt.Tooltip(
-                                                "Proficiência:Q",
-                                                title="Proficiência",
-                                                format=".2f"
-                                            )
-                                        ]
-                                    )
-                                )
-
-
-                                # ==================
-                                # VALORES DAS COLUNAS
-                                # ==================
-
-                                valores_barras = (
-                                    alt.Chart(
-                                        dados_colunas
-                                    )
-                                    .mark_text(
-                                        dy=-8,
-                                        fontSize=9
-                                    )
-                                    .encode(
-
-                                        x=alt.X(
+                                        alt.Tooltip(
                                             "Ano:O",
-                                            sort=anos_saeb
+                                            title="Ano"
                                         ),
 
-                                        xOffset=alt.XOffset(
-                                            "Disciplina:N",
-                                            sort=[
-                                                "Língua Portuguesa",
-                                                "Matemática"
+                                        alt.Tooltip(
+                                            "Proficiência:Q",
+                                            title="Proficiência",
+                                            format=".2f"
+                                        )
+                                    ]
+                                )
+                            )
+
+
+                            # ======================
+                            # LINHAS DO N
+                            # COR = MUNICÍPIO
+                            # ======================
+
+                            linhas_n_combinadas = (
+                                alt.Chart(
+                                    dados_linha_n
+                                )
+                                .mark_line(
+                                    point=True,
+                                    strokeWidth=4
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        sort=anos_saeb
+                                    ),
+
+                                    y=alt.Y(
+                                        "N:Q",
+                                        title=(
+                                            "Nota Média "
+                                            "Padronizada (N)"
+                                        ),
+                                        scale=alt.Scale(
+                                            domain=[
+                                                n_min,
+                                                n_max
                                             ]
                                         ),
-
-                                        y=alt.Y(
-                                            "Proficiência:Q",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    prof_min,
-                                                    prof_max
-                                                ]
-                                            )
-                                        ),
-
-                                        text=alt.Text(
-                                            "Proficiência:Q",
-                                            format=".2f"
-                                        ),
-
-                                        color=alt.Color(
-                                            "Disciplina:N",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    "Língua Portuguesa",
-                                                    "Matemática"
-                                                ],
-                                                range=[
-                                                    "#D46A8A",
-                                                    "#8A6BC1"
-                                                ]
-                                            ),
-                                            legend=None
-                                        )
-                                    )
-                                )
-
-
-                                # ==================
-                                # LINHA N
-                                # ==================
-
-                                linha_n_combinada = (
-                                    alt.Chart(
-                                        dados_linha_n
-                                    )
-                                    .mark_line(
-                                        point=True,
-                                        strokeWidth=3,
-                                        color="#444444"
-                                    )
-                                    .encode(
-
-                                        x=alt.X(
-                                            "Ano:O",
-                                            sort=anos_saeb
-                                        ),
-
-                                        y=alt.Y(
-                                            "N:Q",
-                                            title=(
-                                                "Nota Média "
-                                                "Padronizada (N)"
-                                            ),
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    n_min,
-                                                    n_max
-                                                ]
-                                            ),
-                                            axis=alt.Axis(
-                                                orient="right",
-                                                format=".2f",
-                                                titleColor="#444444"
-                                            )
-                                        ),
-
-                                        tooltip=[
-                                            alt.Tooltip(
-                                                "Ano:O",
-                                                title="Ano"
-                                            ),
-
-                                            alt.Tooltip(
-                                                "N:Q",
-                                                title="N",
-                                                format=".2f"
-                                            )
-                                        ]
-                                    )
-                                )
-
-
-                                # ==================
-                                # VALORES N
-                                # ==================
-
-                                valores_n_combinado = (
-                                    alt.Chart(
-                                        dados_linha_n
-                                    )
-                                    .mark_text(
-                                        dy=-14,
-                                        fontSize=10,
-                                        color="#444444"
-                                    )
-                                    .encode(
-
-                                        x=alt.X(
-                                            "Ano:O",
-                                            sort=anos_saeb
-                                        ),
-
-                                        y=alt.Y(
-                                            "N:Q",
-                                            scale=alt.Scale(
-                                                domain=[
-                                                    n_min,
-                                                    n_max
-                                                ]
-                                            )
-                                        ),
-
-                                        text=alt.Text(
-                                            "N:Q",
+                                        axis=alt.Axis(
+                                            orient="right",
                                             format=".2f"
                                         )
+                                    ),
+
+                                    color=alt.Color(
+                                        "Comparação:N",
+                                        title=(
+                                            "Município / Rede"
+                                        ),
+                                        sort=(
+                                            comparacoes_saeb
+                                        ),
+                                        legend=None
+                                    ),
+
+                                    detail=alt.Detail(
+                                        "Comparação:N"
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Município:N",
+                                            title="Município"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Rede:N",
+                                            title="Rede"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Ano:O",
+                                            title="Ano"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "N:Q",
+                                            title="N",
+                                            format=".2f"
+                                        )
+                                    ]
+                                )
+                            )
+
+
+                            # ======================
+                            # VALORES DO N
+                            # ======================
+
+                            valores_n_combinados = (
+                                alt.Chart(
+                                    dados_linha_n
+                                )
+                                .mark_text(
+                                    dy=-14,
+                                    fontSize=9
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        sort=anos_saeb
+                                    ),
+
+                                    y=alt.Y(
+                                        "N:Q",
+                                        scale=alt.Scale(
+                                            domain=[
+                                                n_min,
+                                                n_max
+                                            ]
+                                        )
+                                    ),
+
+                                    text=alt.Text(
+                                        "N:Q",
+                                        format=".2f"
+                                    ),
+
+                                    color=alt.Color(
+                                        "Comparação:N",
+                                        sort=(
+                                            comparacoes_saeb
+                                        ),
+                                        legend=None
+                                    ),
+
+                                    detail=alt.Detail(
+                                        "Comparação:N"
                                     )
                                 )
+                            )
 
 
-                                grafico_combinado = (
-                                    alt.layer(
-                                        barras_prof,
-                                        valores_barras,
-                                        linha_n_combinada,
-                                        valores_n_combinado
-                                    )
-                                    .resolve_scale(
-                                        y="independent"
-                                    )
-                                    .properties(
-                                        height=450
-                                    )
+                            grafico_combinado = (
+                                alt.layer(
+                                    barras_prof,
+                                    linhas_n_combinadas,
+                                    valores_n_combinados
                                 )
-
-
-                                st.altair_chart(
-                                    grafico_combinado,
-                                    use_container_width=True
+                                .resolve_scale(
+                                    y="independent"
                                 )
+                                .properties(
+                                    height=480
+                                )
+                            )
+
+
+                            st.altair_chart(
+                                grafico_combinado,
+                                use_container_width=True
+                            )
 
 
                 st.caption(
