@@ -683,12 +683,486 @@ with aba_municipios:
             # ÁREA DOS GRÁFICOS
             # ======================================
 
-            st.info(
-                "A seleção está preparada. "
-                "Os gráficos do indicador escolhido "
-                "serão incorporados nas próximas "
-                "etapas da análise."
-            )
+            # ======================================
+            # TAXA DE APROVAÇÃO
+            # ======================================
+
+            if opcao_comparacao == "Taxa de Aprovação":
+
+                st.markdown(
+                    "### Taxa de Aprovação"
+                )
+
+
+                # ==================================
+                # TIPO DE VISUALIZAÇÃO
+                # ==================================
+
+                visualizacao_aprovacao = st.selectbox(
+                    "Visualização da aprovação",
+                    [
+                        "Aprovação Geral",
+                        "Por série/ano"
+                    ],
+                    index=0,
+                    key="visualizacao_aprovacao_municipios"
+                )
+
+
+                # ==================================
+                # ANOS DA ANÁLISE
+                # ==================================
+
+                anos_comparacao = [
+                    str(ano)
+                    for ano in anos_disponiveis
+                    if (
+                        ano_inicial
+                        <= ano
+                        <= ano_final
+                    )
+                ]
+
+
+                dados_aprovacao = (
+                    dados_comparacao
+                    .copy()
+                )
+
+
+                dados_aprovacao["Ano"] = (
+                    dados_aprovacao["Ano"]
+                    .astype(int)
+                    .astype(str)
+                )
+
+
+                # ==================================
+                # APROVAÇÃO GERAL
+                # ==================================
+
+                if (
+                    visualizacao_aprovacao
+                    == "Aprovação Geral"
+                ):
+
+                    for etapa in etapas_selecionadas:
+
+                        st.markdown(
+                            f"#### {etapa}"
+                        )
+
+
+                        dados_etapa = (
+                            dados_aprovacao[
+                                dados_aprovacao[
+                                    "Etapa"
+                                ]
+                                == etapa
+                            ]
+                            .copy()
+                        )
+
+
+                        dados_etapa = (
+                            dados_etapa[
+                                [
+                                    "Município",
+                                    "Rede",
+                                    "Comparação",
+                                    "Ano",
+                                    "Aprovação Geral"
+                                ]
+                            ]
+                            .dropna(
+                                subset=[
+                                    "Aprovação Geral"
+                                ]
+                            )
+                        )
+
+
+                        if dados_etapa.empty:
+
+                            st.info(
+                                "Não há resultados de "
+                                "Aprovação Geral para "
+                                "esta etapa e período."
+                            )
+
+                            continue
+
+
+                        # --------------------------
+                        # LINHAS
+                        # --------------------------
+
+                        linhas_grafico = (
+                            alt.Chart(
+                                dados_etapa
+                            )
+                            .mark_line(
+                                point=True
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Ano:O",
+                                    title="Ano",
+                                    sort=anos_comparacao,
+                                    axis=alt.Axis(
+                                        labelAngle=0
+                                    )
+                                ),
+
+                                y=alt.Y(
+                                    "Aprovação Geral:Q",
+                                    title=(
+                                        "Taxa de Aprovação (%)"
+                                    ),
+                                    scale=alt.Scale(
+                                        domain=[
+                                            0,
+                                            100
+                                        ]
+                                    )
+                                ),
+
+                                color=alt.Color(
+                                    "Comparação:N",
+                                    title=(
+                                        "Município / Rede"
+                                    )
+                                ),
+
+                                strokeWidth=alt.condition(
+                                    (
+                                        alt.datum.Município
+                                        == municipio_referencia
+                                    ),
+                                    alt.value(4),
+                                    alt.value(2)
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Município:N",
+                                        title="Município"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Rede:N",
+                                        title="Rede"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Ano:O",
+                                        title="Ano"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Aprovação Geral:Q",
+                                        title="Aprovação",
+                                        format=".1f"
+                                    )
+                                ]
+                            )
+                        )
+
+
+                        # --------------------------
+                        # VALORES NOS PONTOS
+                        # --------------------------
+
+                        valores_grafico = (
+                            alt.Chart(
+                                dados_etapa
+                            )
+                            .mark_text(
+                                dy=-12,
+                                fontSize=11
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Ano:O",
+                                    sort=anos_comparacao
+                                ),
+
+                                y=alt.Y(
+                                    "Aprovação Geral:Q"
+                                ),
+
+                                text=alt.Text(
+                                    "Aprovação Geral:Q",
+                                    format=".1f"
+                                ),
+
+                                color=alt.Color(
+                                    "Comparação:N",
+                                    legend=None
+                                )
+                            )
+                        )
+
+
+                        grafico_aprovacao = (
+                            linhas_grafico
+                            + valores_grafico
+                        ).properties(
+                            height=430
+                        )
+
+
+                        st.altair_chart(
+                            grafico_aprovacao,
+                            use_container_width=True
+                        )
+
+
+                # ==================================
+                # APROVAÇÃO POR SÉRIE / ANO
+                # ==================================
+
+                else:
+
+                    for etapa in etapas_selecionadas:
+
+                        st.markdown(
+                            f"#### {etapa}"
+                        )
+
+
+                        if etapa == "Fundamental I":
+
+                            series_etapa = [
+                                "1º",
+                                "2º",
+                                "3º",
+                                "4º",
+                                "5º"
+                            ]
+
+                        else:
+
+                            series_etapa = [
+                                "6º",
+                                "7º",
+                                "8º",
+                                "9º"
+                            ]
+
+
+                        series_disponiveis = [
+                            serie
+                            for serie in series_etapa
+                            if serie
+                            in dados_aprovacao.columns
+                        ]
+
+
+                        if not series_disponiveis:
+
+                            st.info(
+                                "Não há taxas por série "
+                                "disponíveis para esta etapa."
+                            )
+
+                            continue
+
+
+                        dados_etapa = (
+                            dados_aprovacao[
+                                dados_aprovacao[
+                                    "Etapa"
+                                ]
+                                == etapa
+                            ]
+                            .copy()
+                        )
+
+
+                        if dados_etapa.empty:
+
+                            st.info(
+                                "Não há resultados "
+                                "disponíveis para esta etapa."
+                            )
+
+                            continue
+
+
+                        # ==========================
+                        # UM GRÁFICO POR MUNICÍPIO
+                        # ==========================
+
+                        comparacoes_disponiveis = (
+                            dados_etapa[
+                                "Comparação"
+                            ]
+                            .dropna()
+                            .unique()
+                            .tolist()
+                        )
+
+
+                        for comparacao in (
+                            comparacoes_disponiveis
+                        ):
+
+                            dados_municipio_serie = (
+                                dados_etapa[
+                                    dados_etapa[
+                                        "Comparação"
+                                    ]
+                                    == comparacao
+                                ]
+                                .copy()
+                            )
+
+
+                            dados_longos = (
+                                dados_municipio_serie[
+                                    [
+                                        "Ano",
+                                        *series_disponiveis
+                                    ]
+                                ]
+                                .melt(
+                                    id_vars=[
+                                        "Ano"
+                                    ],
+                                    value_vars=(
+                                        series_disponiveis
+                                    ),
+                                    var_name="Série",
+                                    value_name=(
+                                        "Taxa de Aprovação"
+                                    )
+                                )
+                                .dropna(
+                                    subset=[
+                                        "Taxa de Aprovação"
+                                    ]
+                                )
+                            )
+
+
+                            if dados_longos.empty:
+
+                                continue
+
+
+                            st.markdown(
+                                f"##### {comparacao}"
+                            )
+
+
+                            grafico_series = (
+                                alt.Chart(
+                                    dados_longos
+                                )
+                                .mark_line(
+                                    point=True
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Ano:O",
+                                        title="Ano",
+                                        sort=anos_comparacao,
+                                        axis=alt.Axis(
+                                            labelAngle=0
+                                        )
+                                    ),
+
+                                    y=alt.Y(
+                                        "Taxa de Aprovação:Q",
+                                        title=(
+                                            "Taxa de Aprovação (%)"
+                                        ),
+                                        scale=alt.Scale(
+                                            domain=[
+                                                0,
+                                                100
+                                            ]
+                                        )
+                                    ),
+
+                                    color=alt.Color(
+                                        "Série:N",
+                                        title="Série / Ano"
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Ano:O",
+                                            title="Ano"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Série:N",
+                                            title="Série"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Taxa de Aprovação:Q",
+                                            title="Aprovação",
+                                            format=".1f"
+                                        )
+                                    ]
+                                )
+                                .properties(
+                                    height=390
+                                )
+                            )
+
+
+                            st.altair_chart(
+                                grafico_series,
+                                use_container_width=True
+                            )
+
+
+                st.caption(
+                    "Barueri permanece como referência "
+                    "pela Rede Municipal. "
+                    "Os demais municípios utilizam "
+                    "exclusivamente a rede escolhida "
+                    "para comparação."
+                )
+
+
+            # ======================================
+            # DEMAIS INDICADORES
+            # ======================================
+
+            elif (
+                opcao_comparacao
+                == "Indicador de Rendimento (P)"
+            ):
+
+                st.info(
+                    "A análise do Indicador de "
+                    "Rendimento (P) será incorporada "
+                    "na etapa 5.10.6."
+                )
+
+
+            elif opcao_comparacao == "Nota SAEB":
+
+                st.info(
+                    "A análise da Nota SAEB será "
+                    "incorporada na etapa 5.10.7."
+                )
+
+
+            elif opcao_comparacao == "IDEB":
+
+                st.info(
+                    "A análise do IDEB será "
+                    "incorporada na etapa 5.10.8."
+                )
 
 
     elif analise_municipal == "Evolução":
