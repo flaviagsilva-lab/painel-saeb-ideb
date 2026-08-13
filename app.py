@@ -863,6 +863,10 @@ with aba_municipios:
                         )
 
 
+                        # ==========================
+                        # LINHAS
+                        # ==========================
+
                         linhas_grafico = (
                             alt.Chart(
                                 dados_etapa
@@ -939,6 +943,10 @@ with aba_municipios:
                         )
 
 
+                        # ==========================
+                        # VALORES
+                        # ==========================
+
                         valores_grafico = (
                             alt.Chart(
                                 dados_etapa
@@ -970,8 +978,7 @@ with aba_municipios:
                                 ),
 
                                 color=alt.Color(
-                                    "Comparação:N",
-                                    legend=None
+                                    "Comparação:N"
                                 )
                             )
                         )
@@ -998,7 +1005,7 @@ with aba_municipios:
                 else:
 
                     # ==================================
-                    # MUNICÍPIOS QUE DEVEM APARECER
+                    # MUNICÍPIOS ESPERADOS
                     # ==================================
 
                     comparacoes_esperadas = [
@@ -1088,8 +1095,7 @@ with aba_municipios:
 
 
                         # ==============================
-                        # CONVERTER TODAS AS SÉRIES
-                        # PARA NUMÉRICO
+                        # CONVERSÃO PARA NUMÉRICO
                         # ==============================
 
                         for serie in series_disponiveis:
@@ -1105,7 +1111,7 @@ with aba_municipios:
 
 
                         # ==============================
-                        # GRÁFICO DE CADA MUNICÍPIO
+                        # GRÁFICO POR MUNICÍPIO
                         # ==============================
 
                         for comparacao in (
@@ -1127,11 +1133,6 @@ with aba_municipios:
                                 .copy()
                             )
 
-
-                            # --------------------------
-                            # MUNICÍPIO NÃO POSSUI
-                            # REGISTRO NESTA ETAPA
-                            # --------------------------
 
                             if (
                                 dados_municipio_serie.empty
@@ -1192,12 +1193,6 @@ with aba_municipios:
                             )
 
 
-                            # --------------------------
-                            # EXISTE MUNICÍPIO,
-                            # MAS NÃO EXISTEM TAXAS
-                            # POR SÉRIE
-                            # --------------------------
-
                             if dados_longos.empty:
 
                                 st.caption(
@@ -1227,7 +1222,7 @@ with aba_municipios:
 
 
                             # ==========================
-                            # LINHAS
+                            # LINHAS + LEGENDA
                             # ==========================
 
                             linhas_series = (
@@ -1266,7 +1261,12 @@ with aba_municipios:
 
                                     color=alt.Color(
                                         "Série:N",
-                                        title="Série / Ano"
+                                        title="Série / Ano",
+                                        sort=series_disponiveis,
+                                        legend=alt.Legend(
+                                            orient="bottom",
+                                            direction="horizontal"
+                                        )
                                     ),
 
                                     tooltip=[
@@ -1292,6 +1292,7 @@ with aba_municipios:
 
                             # ==========================
                             # VALORES
+                            # SEM INTERFERIR NA LEGENDA
                             # ==========================
 
                             valores_series = (
@@ -1324,9 +1325,8 @@ with aba_municipios:
                                         format=".1f"
                                     ),
 
-                                    color=alt.Color(
-                                        "Série:N",
-                                        legend=None
+                                    detail=alt.Detail(
+                                        "Série:N"
                                     )
                                 )
                             )
@@ -1336,7 +1336,7 @@ with aba_municipios:
                                 linhas_series
                                 + valores_series
                             ).properties(
-                                height=390
+                                height=420
                             )
 
 
