@@ -2596,7 +2596,7 @@ with aba_municipios:
 
 
                 # ==================================
-                # ORDEM DOS MUNICÍPIOS
+                # MUNICÍPIOS ESPERADOS
                 # ==================================
 
                 comparacoes_saeb = [
@@ -2682,7 +2682,7 @@ with aba_municipios:
 
 
                 # ==================================
-                # ESCALA DAS PROFICIÊNCIAS
+                # ESCALA DINÂMICA DA PROFICIÊNCIA
                 # ==================================
 
                 def escala_prof_saeb(
@@ -2741,6 +2741,8 @@ with aba_municipios:
                     )
 
 
+                    # mínimo de 30 pontos
+                    # de amplitude visual
                     if (
                         superior - inferior
                         < 30
@@ -2761,13 +2763,13 @@ with aba_municipios:
 
 
                     return (
-                        inferior,
-                        superior
+                        round(inferior, 1),
+                        round(superior, 1)
                     )
 
 
                 # ==================================
-                # ESCALA DO N
+                # ESCALA DINÂMICA DO N
                 # ==================================
 
                 def escala_n_saeb(
@@ -2799,12 +2801,12 @@ with aba_municipios:
 
                     inferior = max(
                         0,
-                        minimo - 0.2
+                        minimo - 0.20
                     )
 
                     superior = min(
                         10,
-                        maximo + 0.2
+                        maximo + 0.20
                     )
 
 
@@ -2827,6 +2829,8 @@ with aba_municipios:
                     )
 
 
+                    # evita escala excessivamente
+                    # apertada
                     if (
                         superior - inferior
                         < 0.8
@@ -2848,14 +2852,14 @@ with aba_municipios:
 
 
                     return (
-                        inferior,
-                        superior
+                        round(inferior, 2),
+                        round(superior, 2)
                     )
 
 
                 # ==================================
                 # 1. LP × MATEMÁTICA
-                # TODAS AS LINHAS CONTÍNUAS
+                # LINHAS CONTÍNUAS
                 # ==================================
 
                 if (
@@ -2959,17 +2963,16 @@ with aba_municipios:
                                 continue
 
 
-                            dados_long["Nível"] = (
-                                dados_long[
-                                    "Proficiência"
-                                ]
-                                .apply(
-                                    lambda valor:
-                                        classificar_nivel_saeb(
-                                            valor,
-                                            etapa
-                                        )
-                                )
+                            dados_long[
+                                "Nível"
+                            ] = dados_long[
+                                "Proficiência"
+                            ].apply(
+                                lambda valor:
+                                    classificar_nivel_saeb(
+                                        valor,
+                                        etapa
+                                    )
                             )
 
 
@@ -2986,20 +2989,6 @@ with aba_municipios:
                             )
 
 
-                            (
-                                prof_min,
-                                prof_max
-                            ) = escala_prof_saeb(
-                                dados_long[
-                                    "Proficiência"
-                                ]
-                            )
-
-
-                            # ======================
-                            # ORDEM DAS SÉRIES
-                            # ======================
-
                             ordem_series = []
 
 
@@ -3009,20 +2998,22 @@ with aba_municipios:
                                     disciplinas_saeb
                                 ):
 
-                                    nome_serie = (
+                                    ordem_series.append(
                                         comparacao
                                         + " - "
                                         + disciplina
                                     )
 
-                                    ordem_series.append(
-                                        nome_serie
-                                    )
 
+                            (
+                                prof_min,
+                                prof_max
+                            ) = escala_prof_saeb(
+                                dados_long[
+                                    "Proficiência"
+                                ]
+                            )
 
-                            # ======================
-                            # LINHAS CONTÍNUAS
-                            # ======================
 
                             linhas_prof = (
                                 alt.Chart(
@@ -3108,10 +3099,6 @@ with aba_municipios:
                                 )
                             )
 
-
-                            # ======================
-                            # VALORES
-                            # ======================
 
                             rotulos_prof = (
                                 alt.Chart(
@@ -3370,6 +3357,12 @@ with aba_municipios:
 
                 # ==================================
                 # 3. LP + MATEMÁTICA × N
+                #
+                # COLUNAS = LP / MAT
+                # LINHAS = N
+                #
+                # EIXO ESQUERDO = PROFICIÊNCIA
+                # EIXO DIREITO = N
                 # ==================================
 
                 else:
@@ -3386,9 +3379,12 @@ with aba_municipios:
 
                         st.caption(
                             "As colunas representam as "
-                            "proficiências e as linhas "
-                            "representam a Nota Média "
-                            "Padronizada (N)."
+                            "proficiências de Língua "
+                            "Portuguesa e Matemática. "
+                            "As linhas representam a Nota "
+                            "Média Padronizada (N). "
+                            "Os dois indicadores utilizam "
+                            "escalas verticais independentes."
                         )
 
 
@@ -3430,7 +3426,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # DADOS DAS COLUNAS
+                            # DADOS DAS PROFICIÊNCIAS
                             # ======================
 
                             dados_colunas = (
@@ -3479,7 +3475,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # DADOS DO N
+                            # DADOS DE N
                             # ======================
 
                             dados_linha_n = (
@@ -3505,21 +3501,30 @@ with aba_municipios:
                             )
 
 
-                            if (
-                                dados_colunas.empty
-                                or
-                                dados_linha_n.empty
-                            ):
+                            if dados_colunas.empty:
 
                                 st.info(
-                                    "Não há resultados "
-                                    "simultâneos das "
-                                    "proficiências e de N "
-                                    "para esta etapa."
+                                    "Não há proficiências "
+                                    "disponíveis para esta etapa."
                                 )
 
                                 continue
 
+
+                            if dados_linha_n.empty:
+
+                                st.info(
+                                    "Não há valores de N "
+                                    "disponíveis para esta etapa."
+                                )
+
+                                continue
+
+
+                            # ======================
+                            # ESCALA PROFICIÊNCIA
+                            # EIXO ESQUERDO
+                            # ======================
 
                             (
                                 prof_min,
@@ -3531,13 +3536,24 @@ with aba_municipios:
                             )
 
 
+                            # ======================
+                            # ESCALA N
+                            # EIXO DIREITO
+                            # ======================
+
                             (
                                 n_min,
                                 n_max
                             ) = escala_n_saeb(
-                                dados_linha_n["N"]
+                                dados_linha_n[
+                                    "N"
+                                ]
                             )
 
+
+                            # ======================
+                            # ORDEM DAS COLUNAS
+                            # ======================
 
                             ordem_series = []
 
@@ -3556,8 +3572,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # COLUNAS
-                            # COR = MUNICÍPIO + DISCIPLINA
+                            # COLUNAS LP / MAT
                             # ======================
 
                             barras_prof = (
@@ -3592,13 +3607,19 @@ with aba_municipios:
                                             domain=[
                                                 prof_min,
                                                 prof_max
-                                            ]
+                                            ],
+                                            zero=False
+                                        ),
+                                        axis=alt.Axis(
+                                            orient="left",
+                                            format=".0f"
                                         )
                                     ),
 
                                     color=alt.Color(
                                         "Série gráfica:N",
                                         title=(
+                                            "Proficiência - "
                                             "Município / Disciplina"
                                         ),
                                         sort=ordem_series,
@@ -3670,7 +3691,8 @@ with aba_municipios:
                                             domain=[
                                                 prof_min,
                                                 prof_max
-                                            ]
+                                            ],
+                                            zero=False
                                         )
                                     ),
 
@@ -3689,8 +3711,8 @@ with aba_municipios:
 
 
                             # ======================
-                            # LINHAS DE N
-                            # COR = MUNICÍPIO
+                            # LINHA N
+                            # EIXO DIREITO
                             # ======================
 
                             linhas_n_combinadas = (
@@ -3718,7 +3740,8 @@ with aba_municipios:
                                             domain=[
                                                 n_min,
                                                 n_max
-                                            ]
+                                            ],
+                                            zero=False
                                         ),
                                         axis=alt.Axis(
                                             orient="right",
@@ -3771,7 +3794,7 @@ with aba_municipios:
 
 
                             # ======================
-                            # VALORES DO N
+                            # RÓTULOS DO N
                             # ======================
 
                             valores_n_combinados = (
@@ -3795,7 +3818,8 @@ with aba_municipios:
                                             domain=[
                                                 n_min,
                                                 n_max
-                                            ]
+                                            ],
+                                            zero=False
                                         )
                                     ),
 
@@ -3819,6 +3843,13 @@ with aba_municipios:
                             )
 
 
+                            # ======================
+                            # GRÁFICO FINAL
+                            #
+                            # Y = INDEPENDENTE
+                            # COLOR = INDEPENDENTE
+                            # ======================
+
                             grafico_combinado = (
                                 alt.layer(
                                     barras_prof,
@@ -3827,7 +3858,8 @@ with aba_municipios:
                                     valores_n_combinados
                                 )
                                 .resolve_scale(
-                                    y="independent"
+                                    y="independent",
+                                    color="independent"
                                 )
                                 .properties(
                                     height=500
@@ -3838,6 +3870,20 @@ with aba_municipios:
                             st.altair_chart(
                                 grafico_combinado,
                                 use_container_width=True
+                            )
+
+
+                            # ======================
+                            # INFORMAÇÃO DAS ESCALAS
+                            # ======================
+
+                            st.caption(
+                                f"Escala da proficiência: "
+                                f"{prof_min:.0f} a "
+                                f"{prof_max:.0f} pontos | "
+                                f"Escala de N: "
+                                f"{n_min:.2f} a "
+                                f"{n_max:.2f}"
                             )
 
 
